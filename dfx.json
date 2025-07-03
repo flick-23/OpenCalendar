@@ -1,0 +1,29 @@
+{
+  "canisters": {
+    "icp_calendar_backend_backend": {
+      "declarations": {
+        "node_compatibility": true
+      },
+      "main": "src/icp_calendar_backend_backend/main.mo",
+      "type": "motoko"
+    },
+    "icp_calendar_backend_frontend": {
+      "dependencies": [
+        "icp_calendar_backend_backend"
+      ],
+      "source": [
+        "src/icp_calendar_backend_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "icp_calendar_backend_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
