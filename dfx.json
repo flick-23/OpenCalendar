@@ -1,29 +1,33 @@
 {
+  "version": 1,
   "canisters": {
-    "icp_calendar_backend_backend": {
-      "declarations": {
-        "node_compatibility": true
-      },
-      "main": "src/icp_calendar_backend_backend/main.mo",
-      "type": "motoko"
-    },
-    "icp_calendar_backend_frontend": {
-      "dependencies": [
-        "icp_calendar_backend_backend"
-      ],
-      "source": [
-        "src/icp_calendar_backend_frontend/dist"
-      ],
+    "frontend": {
       "type": "assets",
-      "workspace": "icp_calendar_backend_frontend"
+      "source": [
+        "src/frontend/build/"
+      ]
+    },
+    "user_registry": {
+      "type": "motoko",
+      "main": "src/backend/user_registry/UserRegistry.mo"
+    },
+    "calendar_canister": {
+      "type": "motoko",
+      "main": "src/backend/calendar/CalendarCanister.mo"
+    },
+    "scheduling_canister": {
+      "type": "motoko",
+      "main": "src/backend/scheduling/SchedulingCanister.mo"
+    },
+    "notification_canister": {
+      "type": "motoko",
+      "main": "src/backend/notification/NotificationCanister.mo"
     }
   },
-  "defaults": {
-    "build": {
-      "args": "",
-      "packtool": ""
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
     }
-  },
-  "output_env_file": ".env",
-  "version": 1
+  }
 }

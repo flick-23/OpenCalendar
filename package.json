@@ -13,6 +13,6 @@
   },
   "type": "module",
   "workspaces": [
-    "src/icp_calendar_backend_frontend"
+    "src/frontend"
   ]
 }
