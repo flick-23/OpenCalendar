@@ -1,0 +1,20 @@
+type UserProfile = 
+ record {
+   name: text;
+   "principal": Principal;
+ };
+type Principal = principal;
+type CalendarId = nat;
+type Calendar = 
+ record {
+   color: text;
+   id: CalendarId;
+   name: text;
+   owner: Principal;
+ };
+service : {
+  create_calendar: (text, text) -> (Calendar);
+  get_my_calendars: () -> (vec Calendar);
+  get_my_profile: () -> (opt UserProfile);
+  register: (text) -> (UserProfile);
+}

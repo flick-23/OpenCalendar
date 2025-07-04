@@ -1,0 +1,3 @@
+service : {
+  status: () -> (text) query;
+}

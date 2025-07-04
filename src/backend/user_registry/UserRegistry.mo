@@ -1,15 +1,16 @@
 import HashMap "mo:base/HashMap";
 import Principal "mo:base/Principal";
+import Types "../types";
 import Array "mo:base/Array";
 import Result "mo:base/Result"; // For more structured error handling if needed later
-import Types "../types"; // Corrected import path relative to this file
+import Error "mo:base/Error"; // For error handling
 
 actor UserRegistry {
 
-    stable var userProfiles : HashMap.HashMap<Principal.Principal, Types.UserProfile> = HashMap.HashMap<Principal.Principal, Types.UserProfile>(0, Principal.equal, Principal.hash);
+    var userProfiles : HashMap.HashMap<Principal.Principal, Types.UserProfile> = HashMap.HashMap<Principal.Principal, Types.UserProfile>(0, Principal.equal, Principal.hash);
     // Stores a list of (CalendarId, CalendarName) tuples for each user.
     // CalendarName is stored here for convenience for get_my_calendars, reducing calls if only names are needed.
-    stable var userCalendarsMap : HashMap.HashMap<Principal.Principal, [(Types.CalendarId, Text)]> = HashMap.HashMap<Principal.Principal, [(Types.CalendarId, Text)]>(0, Principal.equal, Principal.hash);
+    var userCalendarsMap : HashMap.HashMap<Principal.Principal, [(Types.CalendarId, Text)]> = HashMap.HashMap<Principal.Principal, [(Types.CalendarId, Text)]>(0, Principal.equal, Principal.hash);
 
     // This counter is a simplification. In a robust system, CalendarCanister would generate its own IDs.
     // UserRegistry would then receive this ID from CalendarCanister upon successful creation.
@@ -96,23 +97,19 @@ actor UserRegistry {
             // If `create_calendar` returns the full `Types.Calendar` (even simulated),
             // and we decided to store more info in `userCalendarsMap` (e.g. `[(Types.CalendarId, Text, Text)]` for id, name, color),
             // we could use that here. However, the plan implies `CalendarCanister` is the source of truth for calendar details.
-            calendars := Array.append(calendars, [{
-                id = id;
-                owner = caller; // Owner is known
-                name = name;
-                color = "placeholder_color"; // This should be fetched from CalendarCanister
-            }]);
+            calendars := Array.append(calendars, [{ id = id; owner = caller; /* Owner is known */
+            name = name; color = "placeholder_color"; /* This should be fetched from CalendarCanister */ }]);
         };
         return calendars;
     };
 
     // Helper module for common operations
     module Nutzer {
-        public func get_or_default<X>(optVal: ?X, defaultVal: X) : X {
-          switch (optVal) {
-            case (null) return defaultVal;
-            case (?x) return x;
-          };
+        public func get_or_default<X>(optVal : ?X, defaultVal : X) : X {
+            switch (optVal) {
+                case (null) return defaultVal;
+                case (?x) return x;
+            };
         };
     };
-}
+};

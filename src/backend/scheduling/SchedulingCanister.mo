@@ -8,7 +8,7 @@ actor SchedulingCanister {
     // - Interacting with CalendarCanisters to check for conflicts.
 
     // A simple query to confirm the canister is operational
-    public shared (msg) query func status() : async Text {
+    public shared query func status() : async Text {
         return "SchedulingCanister: Operational";
     };
 
@@ -18,4 +18,4 @@ actor SchedulingCanister {
     //     // and find a common slot.
     //     throw Error.reject("find_free_slot not implemented");
     // };
-}
+};
