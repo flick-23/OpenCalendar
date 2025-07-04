@@ -55,19 +55,39 @@ export const createActor = async <T>(
 };
 
 export const getUserRegistryActor = async (identity?: Identity | null): Promise<ActorSubclass<UserRegistryService>> => {
-    if (!userRegistryCanisterId) {
+    const canisterId = userRegistryCanisterId || process.env.CANISTER_ID_USER_REGISTRY || 'ulvla-h7777-77774-qaacq-cai';
+    
+    console.log('getUserRegistryActor called with:', { 
+        userRegistryCanisterId, 
+        identity: identity ? 'present' : 'null',
+        processEnvUserRegistry: process.env.CANISTER_ID_USER_REGISTRY,
+        finalCanisterId: canisterId
+    });
+    
+    if (!canisterId) {
+        console.error("User Registry Canister ID not found. Environment variables:", process.env);
         throw new Error("User Registry Canister ID not found. Ensure it's in declarations or environment.");
     }
-    // The canisterId from $declarations might be a string. createActor handles string canisterId.
-    return createActor<UserRegistryService>(userRegistryCanisterId as string, userRegistryIdlFactory, identity);
+    
+    return createActor<UserRegistryService>(canisterId as string, userRegistryIdlFactory, identity);
 };
 
 export const getCalendarCanisterActor = async (identity?: Identity | null): Promise<ActorSubclass<CalendarCanisterService>> => {
-    if (!calendarCanisterId) {
+    const canisterId = calendarCanisterId || process.env.CANISTER_ID_CALENDAR_CANISTER_1 || 'uxrrr-q7777-77774-qaaaq-cai';
+    
+    console.log('getCalendarCanisterActor called with:', { 
+        calendarCanisterId, 
+        identity: identity ? 'present' : 'null',
+        processEnvCalendar: process.env.CANISTER_ID_CALENDAR_CANISTER_1,
+        finalCanisterId: canisterId
+    });
+    
+    if (!canisterId) {
+        console.error("Calendar Canister ID not found. Environment variables:", process.env);
         throw new Error("Calendar Canister ID not found.");
     }
-    // The canisterId from $declarations might be a string. createActor handles string canisterId.
-    return createActor<CalendarCanisterService>(calendarCanisterId as string, calendarCanisterIdlFactory, identity);
+    
+    return createActor<CalendarCanisterService>(canisterId as string, calendarCanisterIdlFactory, identity);
 };
 
 console.log("actors.ts updated with specific canister imports and actor creation functions.");

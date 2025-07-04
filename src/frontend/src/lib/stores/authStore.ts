@@ -120,7 +120,7 @@ export const login = async (): Promise<void> => {
 
   const iiUrl = process.env.DFX_NETWORK === 'ic'
     ? 'https://identity.ic0.app'
-    : `http://127.0.0.1:4943/?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID}`;
+    : `http://127.0.0.1:4943/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`;
 
 
   await new Promise<void>((resolve, reject) => {
