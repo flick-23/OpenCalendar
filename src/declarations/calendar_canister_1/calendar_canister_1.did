@@ -1,0 +1,31 @@
+type Timestamp = int;
+type Principal = principal;
+type EventId = nat;
+type Event = 
+ record {
+   calendarId: CalendarId;
+   color: text;
+   description: text;
+   endTime: Timestamp;
+   id: EventId;
+   startTime: Timestamp;
+   title: text;
+ };
+type CalendarId = nat;
+type Calendar = 
+ record {
+   color: text;
+   id: CalendarId;
+   name: text;
+   owner: Principal;
+ };
+service : {
+  create_calendar_internal: (principal, text, text) -> (Calendar);
+  create_event: (CalendarId, text, text, Timestamp, Timestamp, text) ->
+   (Event);
+  delete_event: (EventId) -> (bool);
+  get_event: (EventId) -> (opt Event);
+  get_events_for_range: (CalendarId, Timestamp, Timestamp) -> (vec Event);
+  update_event: (EventId, opt text, opt text, opt Timestamp, opt Timestamp,
+   opt text) -> (opt Event);
+}

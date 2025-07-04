@@ -1,17 +1,19 @@
 {
   "version": 1,
+  "dfx": "0.27.0",
   "canisters": {
     "frontend": {
       "type": "assets",
       "source": [
-        "src/frontend/build/"
-      ]
+        "src/frontend/dist"
+      ],
+      "dependencies": []
     },
     "user_registry": {
       "type": "motoko",
       "main": "src/backend/user_registry/UserRegistry.mo"
     },
-    "calendar_canister": {
+    "calendar_canister_1": {
       "type": "motoko",
       "main": "src/backend/calendar/CalendarCanister.mo"
     },
@@ -22,6 +24,12 @@
     "notification_canister": {
       "type": "motoko",
       "main": "src/backend/notification/NotificationCanister.mo"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": "",
+      "args": ""
     }
   },
   "networks": {
