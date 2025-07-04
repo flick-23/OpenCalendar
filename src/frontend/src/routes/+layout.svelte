@@ -1,5 +1,5 @@
 <script lang="ts">
-  import '../app.css'; // Import global styles (Tailwind)
+  import './app.css'; // Import global styles (Tailwind)
   import { navigating } from '$app/stores';
   import { isLoggedIn, logout } from '$lib/stores/authStore';
   import { onMount } from 'svelte';
