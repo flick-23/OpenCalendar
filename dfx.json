@@ -7,7 +7,12 @@
       "source": [
         "src/frontend/dist"
       ],
-      "dependencies": []
+      "dependencies": [
+        "user_registry",
+        "calendar_canister_1",
+        "scheduling_canister",
+        "notification_canister"
+      ]
     },
     "user_registry": {
       "type": "motoko",
