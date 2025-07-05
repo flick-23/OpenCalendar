@@ -15,7 +15,7 @@ export const userProfile: Writable<UserProfile | null> = writable<UserProfile | 
 
 let globalAuthClient: AuthClient | null = null;
 
-// Fetch user profile
+// Fetch user profile and auto-register if not found
 export const fetchUserProfile = async (): Promise<void> => {
   const currentIdentity = get(identity); // Use get to read current value of store
   if (!currentIdentity) {
@@ -27,25 +27,34 @@ export const fetchUserProfile = async (): Promise<void> => {
   try {
     console.log("Fetching user profile...");
     const userRegistryActor = await getUserRegistryActor(currentIdentity);
-    // Assuming get_my_profile returns the profile directly or an optional record
-    // Adjust based on the actual return type (e.g., if it's { Ok: profile } or [profile] or null)
+    
+    // Try to get existing profile first
     const profileResult = await userRegistryActor.get_my_profile();
 
-    // Example handling if profileResult is an optional record (Vec<UserProfile>)
-    // or if it can be null/undefined directly.
-    // This depends heavily on your Motoko canister's get_my_profile signature.
-    // If it's an array and you expect one profile:
+    // Check if profile exists
     if (Array.isArray(profileResult) && profileResult.length > 0) {
-        // Assuming the first element is the user's profile.
         userProfile.set(profileResult[0] || null);
         console.log("User profile fetched and set:", profileResult[0]);
     } else if (profileResult && !Array.isArray(profileResult)) {
-        // If it returns a single object (or null)
-        userProfile.set(profileResult as UserProfile); // Cast needed if type is not perfectly aligned
+        userProfile.set(profileResult as UserProfile);
         console.log("User profile fetched and set:", profileResult);
     } else {
-        userProfile.set(null);
-        console.log("No profile data returned or profile is empty.");
+        // User not registered, attempt auto-registration
+        console.log("No profile found, attempting to register user...");
+        try {
+          // Extract principal for a default name if needed
+          const principal = currentIdentity.getPrincipal();
+          const principalText = principal.toString();
+          // Use a simple name - in a real app, you might want to prompt the user
+          const defaultName = `User-${principalText.slice(-8)}`;
+          
+          const newProfile = await userRegistryActor.register(defaultName);
+          userProfile.set(newProfile);
+          console.log("User registered successfully:", newProfile);
+        } catch (registerError) {
+          console.error("Failed to auto-register user:", registerError);
+          userProfile.set(null);
+        }
     }
   } catch (error) {
     console.error("Error fetching user profile:", error);

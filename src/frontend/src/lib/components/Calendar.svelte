@@ -4,9 +4,9 @@
 	import type { AppId } from '$lib/stores/calendarStore';
 	import CalendarHeader from '$lib/components/CalendarHeader.svelte';
 	import MonthView from '$lib/components/views/MonthView.svelte';
-	// import DayView from '$lib/components/views/DayView.svelte'; // Future
-	// import YearView from '$lib/components/views/YearView.svelte'; // Future
-	import EventFormModal from '$lib/components/EventFormModal.svelte'; // Assuming this will be created
+	import DayView from '$lib/components/views/DayView.svelte';
+	import YearView from '$lib/components/views/YearView.svelte';
+	import EventFormModal from '$lib/components/EventFormModal.svelte';
 
 	type CalendarView = 'month' | 'day' | 'year';
 
@@ -22,7 +22,7 @@
 	let currentSelectedCalendarId: AppId | null = null;
 	let isLoadingEvents = false;
 
-	const unsubscribe = calendarStore.subscribe(value => {
+	const unsubscribe = calendarStore.subscribe((value) => {
 		// $: console.log("Calendar.svelte store update:", value);
 		currentEvents = value.events;
 		currentSelectedCalendarId = value.selectedCalendarId;
@@ -59,6 +59,17 @@
 		showEventModal = true;
 	}
 
+	function handleSwitchToMonthView(event: CustomEvent<Date>) {
+		displayDate = event.detail;
+		currentView = 'month';
+		fetchEventsForCurrentPeriod();
+	}
+
+	function handleEventClick(event: CustomEvent<AppEvent>) {
+		// Handle event click - could open edit modal or show details
+		console.log('Event clicked:', event.detail);
+	}
+
 	function handleCloseEventModal() {
 		showEventModal = false;
 		eventModalDate = null;
@@ -67,7 +78,7 @@
 	async function fetchEventsForCurrentPeriod() {
 		if (!currentSelectedCalendarId) {
 			// console.log('No calendar selected, skipping event fetch.');
-			calendarStore.update(s => ({...s, events: []})); // Clear events
+			calendarStore.update((s) => ({ ...s, events: [] })); // Clear events
 			return;
 		}
 
@@ -78,8 +89,20 @@
 			startDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), 1);
 			endDate = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0, 23, 59, 59, 999); // End of the month
 		} else if (currentView === 'day') {
-			startDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), displayDate.getDate());
-			endDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), displayDate.getDate(), 23, 59, 59, 999); // End of the day
+			startDate = new Date(
+				displayDate.getFullYear(),
+				displayDate.getMonth(),
+				displayDate.getDate()
+			);
+			endDate = new Date(
+				displayDate.getFullYear(),
+				displayDate.getMonth(),
+				displayDate.getDate(),
+				23,
+				59,
+				59,
+				999
+			); // End of the day
 		} else if (currentView === 'year') {
 			startDate = new Date(displayDate.getFullYear(), 0, 1); // Start of the year
 			endDate = new Date(displayDate.getFullYear(), 11, 31, 23, 59, 59, 999); // End of the year
@@ -110,7 +133,6 @@
 			unsubscribe();
 		}
 	});
-
 </script>
 
 <div class="calendar-container flex flex-col h-full bg-gray-50">
@@ -127,13 +149,26 @@
 			<div class="text-center p-10">Loading events...</div>
 		{/if}
 		{#if currentView === 'month'}
-			<MonthView bind:displayDate events={currentEvents} selectedCalendarId={currentSelectedCalendarId} on:openEventModalForDate={handleOpenEventModal}/>
+			<MonthView
+				bind:displayDate
+				events={currentEvents}
+				selectedCalendarId={currentSelectedCalendarId}
+				on:openEventModalForDate={handleOpenEventModal}
+			/>
 		{:else if currentView === 'day'}
-			<!-- <DayView bind:displayDate events={currentEvents} /> -->
-			<p class="text-center p-10">Day View (Coming Soon)</p>
+			<DayView
+				bind:displayDate
+				events={currentEvents}
+				on:openEventModalForDate={handleOpenEventModal}
+				on:eventClick={handleEventClick}
+			/>
 		{:else if currentView === 'year'}
-			<!-- <YearView bind:displayDate events={currentEvents} /> -->
-			<p class="text-center p-10">Year View (Coming Soon)</p>
+			<YearView
+				bind:displayDate
+				events={currentEvents}
+				on:openEventModalForDate={handleOpenEventModal}
+				on:switchToMonthView={handleSwitchToMonthView}
+			/>
 		{/if}
 	</div>
 

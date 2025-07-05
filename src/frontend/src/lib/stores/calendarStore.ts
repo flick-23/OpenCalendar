@@ -1,5 +1,5 @@
 import { writable, type Writable, get } from 'svelte/store';
-import { identity as authIdentity, isLoggedIn as authIsLoggedIn } from '$lib/stores/authStore';
+import { identity as authIdentity, isLoggedIn as authIsLoggedIn, fetchUserProfile } from '$lib/stores/authStore';
 import { createActor, getUserRegistryActor } from '$lib/actors/actors'; // Assuming this is the correct path
 import type { ActorSubclass, Identity } from '@dfinity/agent';
 import type { Principal } from '@dfinity/principal';
@@ -198,9 +198,28 @@ export const calendarStore: Writable<CalendarState> & {
             } else {
                 store.update(s => ({ ...s, selectedCalendarId: null, events: [] })); // No calendars, clear events
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Error fetching user calendars:", err);
-            store.update(s => ({ ...s, error: err.message || "Failed to fetch user calendars", isLoadingCalendars: false }));
+            
+            // Check if it's a "User not registered" error
+            const errorMessage = (err as any)?.message || String(err);
+            if (errorMessage.includes("User not registered")) {
+                console.log("User not registered error detected, triggering re-authentication...");
+                // Trigger fetchUserProfile to auto-register the user
+                try {
+                    await fetchUserProfile();
+                    // After successful registration, try fetching calendars again
+                    const backendCalendars = await urActor.get_my_calendars();
+                    const appCalendars = backendCalendars.map(transformUserRegistryCalendarToAppCalendar);
+                    store.update(s => ({ ...s, calendars: appCalendars, isLoadingCalendars: false }));
+                    console.log('User calendars fetched after registration:', appCalendars);
+                    return;
+                } catch (regError) {
+                    console.error("Failed to auto-register user:", regError);
+                }
+            }
+            
+            store.update(s => ({ ...s, error: errorMessage || "Failed to fetch user calendars", isLoadingCalendars: false }));
         }
     },
 

@@ -1,5 +1,15 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import {
+		Plus,
+		Search,
+		HelpCircle,
+		Settings,
+		User,
+		ChevronLeft,
+		ChevronRight,
+		ChevronDown
+	} from 'lucide-svelte';
 
 	export let currentView: 'month' | 'day' | 'year' = 'month';
 	export let displayDate: Date = new Date();
@@ -64,22 +74,18 @@
 
 	<!-- Month/Day/Year Navigation Arrows -->
 	<button
-		class="p-1 sm:px-1 text-gray-600 hover:text-gray-800"
+		class="p-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
 		aria-label="Previous period"
 		on:click={() => navigate('prev')}
 	>
-		<span class="material-icons-outlined cursor-pointer text-gray-600 mx-1 sm:mx-2">
-			chevron_left
-		</span>
+		<ChevronLeft size={20} />
 	</button>
 	<button
-		class="p-1 sm:px-1 text-gray-600 hover:text-gray-800"
+		class="p-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
 		aria-label="Next period"
 		on:click={() => navigate('next')}
 	>
-		<span class="material-icons-outlined cursor-pointer text-gray-600 mx-1 sm:mx-2">
-			chevron_right
-		</span>
+		<ChevronRight size={20} />
 	</button>
 
 	<!-- Current Period Display -->
@@ -93,28 +99,31 @@
 	<!-- Create Event Button - Moved for better flow on smaller screens -->
 	<button
 		title="Create new event"
-		class="ml-4 sm:ml-6 p-2 rounded-full hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+		class="ml-4 sm:ml-6 p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-md"
 		on:click={openEventModal}
 	>
-		<span class="material-icons-outlined text-blue-600">add</span>
+		<Plus size={20} />
 	</button>
 
 	<!-- Right side elements (Search, Support, Settings, View Dropdown) -->
-	<div class="ml-auto flex items-center space-x-1 sm:space-x-2">
+	<div class="ml-auto flex items-center space-x-2">
 		<button
-			class="p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+			class="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+			title="Search"
 		>
-			<span class="material-icons-outlined text-gray-600">search</span>
+			<Search size={18} class="text-gray-600" />
 		</button>
 		<button
-			class="p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+			class="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+			title="Help"
 		>
-			<span class="material-icons-outlined text-gray-600">help_outline</span>
+			<HelpCircle size={18} class="text-gray-600" />
 		</button>
 		<button
-			class="p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+			class="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+			title="Settings"
 		>
-			<span class="material-icons-outlined text-gray-600">settings</span>
+			<Settings size={18} class="text-gray-600" />
 		</button>
 
 		<!-- View Dropdown -->
@@ -122,8 +131,8 @@
 			<select
 				bind:value={currentView}
 				on:change={setCurrentView}
-				aria-label="Select calendar view"
-				class="appearance-none border rounded py-2 pl-3 pr-8 text-sm sm:text-base text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+				aria-label="Calendar View"
+				class="appearance-none border border-gray-300 rounded-md py-2 pl-3 pr-10 text-sm bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 			>
 				{#each viewOptions as option (option.value)}
 					<option value={option.value}>{option.label}</option>
@@ -132,34 +141,30 @@
 			<div
 				class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600"
 			>
-				<span class="material-icons-outlined text-sm">arrow_drop_down</span>
+				<ChevronDown size={16} />
 			</div>
 		</div>
 
 		<!-- Profile/Account Icon -->
 		<button
-			class="ml-1 sm:ml-3 p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 hidden sm:inline-flex"
+			class="ml-2 p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 hidden sm:inline-flex"
+			title="Account"
 		>
-			<span class="material-icons-outlined text-gray-600">account_circle</span>
+			<User size={18} class="text-gray-600" />
 		</button>
 	</div>
 </header>
 
-<!-- Note: This component uses Material Icons.
-	 Make sure to include the Material Icons stylesheet in your app's main HTML file (e.g., app.html)
-	 <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
--->
+<!-- Note: This component now uses Lucide Svelte icons for better consistency and visual appeal -->
 
 <style lang="postcss">
-	.material-icons-outlined {
-		vertical-align: middle;
+	/* Custom styles for better icon alignment and spacing */
+	.lucide {
+		@apply flex-shrink-0;
 	}
-	/* Ensure select dropdown arrow is visible and select has enough padding for it */
+
+	/* Ensure select dropdown has proper styling */
 	select {
-		/* Tailwind's appearance-none should handle this, but explicitly stating for clarity */
-		/* -webkit-appearance: none;
-		-moz-appearance: none;
-		appearance: none; */
-		/* background-image: none; Ensure no default browser arrow if appearance-none is working */
+		background-image: none;
 	}
 </style>
