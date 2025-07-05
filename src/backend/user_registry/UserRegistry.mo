@@ -39,7 +39,7 @@ actor UserRegistry {
         return newUserProfile;
     };
 
-    public shared (msg) func get_my_profile() : async ?Types.UserProfile {
+    public shared query (msg) func get_my_profile() : async ?Types.UserProfile {
         let caller = msg.caller;
         return userProfiles.get(caller);
     };

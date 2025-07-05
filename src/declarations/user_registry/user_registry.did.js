@@ -14,7 +14,7 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     'create_calendar' : IDL.Func([IDL.Text, IDL.Text], [Calendar], []),
     'get_my_calendars' : IDL.Func([], [IDL.Vec(Calendar)], []),
-    'get_my_profile' : IDL.Func([], [IDL.Opt(UserProfile)], []),
+    'get_my_profile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'register' : IDL.Func([IDL.Text], [UserProfile], []),
   });
 };
