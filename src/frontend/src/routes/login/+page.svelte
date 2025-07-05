@@ -46,7 +46,10 @@
 
 <div class="flex items-center justify-center min-h-screen bg-gray-200">
 	<div class="p-8 bg-white shadow-xl rounded-lg max-w-md w-full">
-		<h1 class="text-3xl font-bold text-center text-blue-600 mb-6">OpenCalendar Login</h1>
+		<div class="text-center mb-6">
+			<img src="/OpenCalendar.png" alt="OpenCalendar Logo" class="h-16 w-16 mx-auto mb-4" />
+			<h1 class="text-3xl font-bold text-blue-600">OpenCalendar Login</h1>
+		</div>
 
 		{#if errorMessage}
 			<div

@@ -20,7 +20,10 @@
 	{#if $isLoggedIn}
 		<header class="bg-blue-600 text-white p-4 shadow-md">
 			<div class="container mx-auto flex justify-between items-center">
-				<a href="/" class="text-xl font-bold">OpenCalendar</a>
+				<a href="/" class="flex items-center text-xl font-bold">
+					<img src="/OpenCalendar.png" alt="OpenCalendar Logo" class="h-8 w-8 mr-2" />
+					OpenCalendar
+				</a>
 				<nav>
 					<!-- Navigation links can go here -->
 					<!-- e.g., <a href="/calendar" class="px-3">Calendar</a> -->

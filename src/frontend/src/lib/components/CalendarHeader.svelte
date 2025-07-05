@@ -60,7 +60,7 @@
 
 <header class="px-4 py-2 flex items-center bg-white shadow sticky top-0 z-50">
 	<!-- Logo and App Name -->
-	<img src="/favicon.svg" alt="Calendar Icon" class="h-8 w-8 mr-2" />
+	<img src="/OpenCalendar.png" alt="OpenCalendar Logo" class="h-8 w-8 mr-2" />
 	<!-- Hide on very small screens -->
 	<h1 class="mr-10 text-xl text-gray-500 font-bold hidden sm:block">Calendar</h1>
 
