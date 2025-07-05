@@ -3,17 +3,7 @@ import { AuthClient } from '@dfinity/auth-client';
 import type { Identity } from '@dfinity/agent';
 import type { Principal } from '@dfinity/principal';
 import { getUserRegistryActor } from '$lib/actors/actors';
-// Assuming UserProfile type will be defined in user_registry.did.d.ts or similar
-// For now, let's define a placeholder. If `get_my_profile` returns `null` or `[]` for no profile, adjust accordingly.
-// import type { UserProfile as BackendUserProfile } from '$declarations/user_registry/user_registry.did';
-// ^ This would be ideal if UserProfile is an exported type.
-
-// Placeholder UserProfile type - replace with actual type from declarations if available
-export interface UserProfile {
-  username: string;
-  // Add other profile fields here based on your .did file
-  // e.g., email?: string; bio?: string;
-}
+import type { UserProfile } from '$declarations/user_registry/user_registry.did';
 
 // Create writable stores for each piece of the auth state
 export const isLoggedIn: Writable<boolean> = writable<boolean>(false);
@@ -47,8 +37,7 @@ export const fetchUserProfile = async (): Promise<void> => {
     // If it's an array and you expect one profile:
     if (Array.isArray(profileResult) && profileResult.length > 0) {
         // Assuming the first element is the user's profile.
-        // And assuming its structure matches UserProfile.
-        userProfile.set(profileResult[0] as UserProfile);
+        userProfile.set(profileResult[0] || null);
         console.log("User profile fetched and set:", profileResult[0]);
     } else if (profileResult && !Array.isArray(profileResult)) {
         // If it returns a single object (or null)
@@ -67,6 +56,7 @@ export const fetchUserProfile = async (): Promise<void> => {
 // Initialize the authentication client
 export const initAuth = async (): Promise<void> => {
   if (globalAuthClient) {
+    console.log('AuthClient already initialized, checking authentication status...');
     const currentIsLoggedIn = await globalAuthClient.isAuthenticated();
     const currentIdentity = currentIsLoggedIn ? globalAuthClient.getIdentity() : null;
     isLoggedIn.set(currentIsLoggedIn);
@@ -74,6 +64,7 @@ export const initAuth = async (): Promise<void> => {
     principal.set(currentIdentity ? currentIdentity.getPrincipal() : null);
     authClientStore.set(globalAuthClient);
     if (currentIsLoggedIn) {
+      console.log('User is already authenticated, fetching profile...');
       await fetchUserProfile(); // Fetch profile if already logged in
     } else {
       userProfile.set(null); // Clear profile if not logged in
@@ -82,6 +73,7 @@ export const initAuth = async (): Promise<void> => {
   }
 
   try {
+    console.log('Creating AuthClient...');
     const client = await AuthClient.create();
     globalAuthClient = client;
     authClientStore.set(client);
@@ -90,11 +82,14 @@ export const initAuth = async (): Promise<void> => {
     isLoggedIn.set(currentIsLoggedIn);
 
     if (currentIsLoggedIn) {
+      console.log('User is authenticated, setting up identity...');
       const currentIdentity = client.getIdentity();
       identity.set(currentIdentity);
       principal.set(currentIdentity.getPrincipal());
+      console.log('Principal:', currentIdentity.getPrincipal().toString());
       await fetchUserProfile(); // Fetch profile after setting identity
     } else {
+      console.log('User is not authenticated');
       userProfile.set(null); // Ensure profile is cleared if not logged in
     }
   } catch (error) {
@@ -104,7 +99,29 @@ export const initAuth = async (): Promise<void> => {
     principal.set(null);
     authClientStore.set(null);
     userProfile.set(null);
+    throw error;
   }
+};
+
+// Helper function to get the Internet Identity URL
+const getInternetIdentityUrl = (): string => {
+  const isIC = process.env.DFX_NETWORK === 'ic';
+  
+  if (isIC) {
+    return 'https://identity.ic0.app';
+  }
+  
+  // For local development, use the local Internet Identity canister
+  const iiCanisterId = process.env.CANISTER_ID_INTERNET_IDENTITY;
+  
+  if (!iiCanisterId) {
+    console.error('Internet Identity canister ID not found in environment variables');
+    throw new Error('Internet Identity canister ID not configured');
+  }
+  
+  // For local development, always use the legacy format which works reliably across all browsers
+  // This matches the port configuration in dfx.json (127.0.0.1:8000)
+  return `http://127.0.0.1:8000/?canisterId=${iiCanisterId}`;
 };
 
 // Login function
@@ -118,33 +135,60 @@ export const login = async (): Promise<void> => {
   }
   const client = globalAuthClient!;
 
-  const iiUrl = process.env.DFX_NETWORK === 'ic'
-    ? 'https://identity.ic0.app'
-    : `http://127.0.0.1:4943/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai`;
+  try {
+    const iiUrl = getInternetIdentityUrl();
+    console.log('Attempting to login with Internet Identity URL:', iiUrl);
 
-
-  await new Promise<void>((resolve, reject) => {
-    client.login({
-      identityProvider: iiUrl,
-      onSuccess: async () => {
-        const currentIdentity = client.getIdentity();
-        identity.set(currentIdentity);
-        principal.set(currentIdentity.getPrincipal());
-        isLoggedIn.set(true);
-        authClientStore.set(client);
-        await fetchUserProfile(); // Fetch profile on successful login
-        resolve();
-      },
-      onError: (err) => {
-        console.error("Login failed:", err);
-        isLoggedIn.set(false);
-        identity.set(null);
-        principal.set(null);
-        userProfile.set(null); // Clear profile on login failure
-        reject(err);
-      },
+    await new Promise<void>((resolve, reject) => {
+      client.login({
+        identityProvider: iiUrl,
+        onSuccess: async () => {
+          console.log('Login successful');
+          const currentIdentity = client.getIdentity();
+          identity.set(currentIdentity);
+          principal.set(currentIdentity.getPrincipal());
+          isLoggedIn.set(true);
+          authClientStore.set(client);
+          await fetchUserProfile(); // Fetch profile on successful login
+          resolve();
+        },
+        onError: (err) => {
+          console.error("Login failed:", err);
+          isLoggedIn.set(false);
+          identity.set(null);
+          principal.set(null);
+          userProfile.set(null); // Clear profile on login failure
+          reject(err);
+        },
+      });
     });
-  });
+  } catch (error) {
+    console.error("Error during login process:", error);
+    isLoggedIn.set(false);
+    identity.set(null);
+    principal.set(null);
+    userProfile.set(null);
+    throw error;
+  }
+};
+
+// Get the current principal (similar to whoami in the guide)
+export const getPrincipal = (): Principal | null => {
+  const currentPrincipal = get(principal);
+  return currentPrincipal;
+};
+
+// Check if user is authenticated
+export const checkAuthStatus = async (): Promise<boolean> => {
+  if (!globalAuthClient) {
+    await initAuth();
+  }
+  
+  if (globalAuthClient) {
+    return await globalAuthClient.isAuthenticated();
+  }
+  
+  return false;
 };
 
 // Logout function
@@ -153,10 +197,23 @@ export const logout = async (): Promise<void> => {
     console.error("AuthClient not initialized, cannot logout.");
     return;
   }
-  await globalAuthClient.logout();
-  isLoggedIn.set(false);
-  identity.set(null);
-  principal.set(null);
-  userProfile.set(null); // Clear profile on logout
-  // Keep authClientStore set for potential re-login
+  
+  try {
+    console.log('Logging out...');
+    await globalAuthClient.logout();
+    isLoggedIn.set(false);
+    identity.set(null);
+    principal.set(null);
+    userProfile.set(null); // Clear profile on logout
+    console.log('Logout successful');
+    // Keep authClientStore set for potential re-login
+  } catch (error) {
+    console.error("Error during logout:", error);
+    // Still clear the state even if logout fails
+    isLoggedIn.set(false);
+    identity.set(null);
+    principal.set(null);
+    userProfile.set(null);
+    throw error;
+  }
 };
