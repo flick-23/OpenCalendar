@@ -18,7 +18,7 @@ actor UserRegistry {
     // stable var simulatedNextCalendarId : Types.CalendarId = 0; // Removed for stability - no longer needed
 
     // This will be set by an admin/deployer after calendar_canister_1 is deployed.
-    // Made stable to persist across deployments
+    // Migration: keeping this as stable to maintain interface compatibility
     stable var calendarCanisterPrincipal : ?Principal.Principal = null;
 
     // Define the interface for the CalendarCanister
@@ -30,22 +30,27 @@ actor UserRegistry {
 
     var calendarCanister1 : ?CalendarCanisterActor = null;
 
-    // Initialize calendar canister actor if principal is already set
-    // This is called on canister start/upgrade to restore the actor from stable storage
-    private func initCalendarCanister() : () {
-        switch (calendarCanisterPrincipal) {
+    // Helper function to ensure calendar canister is configured
+    private func ensureCalendarCanisterConfigured() : async ?CalendarCanisterActor {
+        switch (calendarCanister1) {
+            case (?canister) return ?canister;
             case (null) {
-                Debug.print("UserRegistry: No calendar canister principal configured");
-            };
-            case (?id) {
-                calendarCanister1 := ?(actor (Principal.toText(id)) : CalendarCanisterActor);
-                Debug.print("UserRegistry: Calendar canister actor restored for ID " # Principal.toText(id));
+                // Try to auto-configure with the known calendar canister ID
+                // This is the ID from our deployment
+                let knownCalendarCanisterId = "uxrrr-q7777-77774-qaaaq-cai";
+                try {
+                    let calendarPrincipal = Principal.fromText(knownCalendarCanisterId);
+                    calendarCanisterPrincipal := ?calendarPrincipal;
+                    calendarCanister1 := ?(actor (knownCalendarCanisterId) : CalendarCanisterActor);
+                    Debug.print("UserRegistry: Auto-configured calendar canister ID to " # knownCalendarCanisterId);
+                    return calendarCanister1;
+                } catch (_) {
+                    Debug.print("UserRegistry: Failed to auto-configure calendar canister");
+                    return null;
+                };
             };
         };
     };
-
-    // Call initialization on startup
-    initCalendarCanister();
 
     // Admin function to set the calendar canister principal
     // This should be restricted, e.g., to the controller of this canister.
@@ -91,7 +96,7 @@ actor UserRegistry {
             throw Error.reject("User not registered. Please register first.");
         };
 
-        let currentCalendarCanister = switch (calendarCanister1) {
+        let currentCalendarCanister = switch (await ensureCalendarCanisterConfigured()) {
             case (null) {
                 throw Error.reject("Calendar canister service not configured in UserRegistry.");
             };
@@ -102,7 +107,10 @@ actor UserRegistry {
         let newCalendar : Types.Calendar = await currentCalendarCanister.create_calendar_internal(caller, name, color);
 
         // After successful creation, add to user's list
-        let currentUserCalendars = Nutzer.get_or_default(userCalendarsMap.get(caller), []);
+        let currentUserCalendars = switch (userCalendarsMap.get(caller)) {
+            case (null) [];
+            case (?calendars) calendars;
+        };
         // Store only ID and name, as the full Calendar object resides in CalendarCanister
         // The name is stored for convenience for get_my_calendars if only names are needed quickly,
         // but for full details, we'll fetch from CalendarCanister.
@@ -118,10 +126,13 @@ actor UserRegistry {
             throw Error.reject("User not registered.");
         };
 
-        let calendarRefs = Nutzer.get_or_default(userCalendarsMap.get(caller), []);
+        let calendarRefs = switch (userCalendarsMap.get(caller)) {
+            case (null) [];
+            case (?calendars) calendars;
+        };
         var result_calendars : [Types.Calendar] = [];
 
-        let currentCalendarCanister = switch (calendarCanister1) {
+        let currentCalendarCanister = switch (await ensureCalendarCanisterConfigured()) {
             case (null) {
                 Debug.print("UserRegistry.get_my_calendars: Calendar canister service not configured.");
                 // Depending on desired behavior, could throw or return empty. Returning empty for now.
@@ -145,20 +156,5 @@ actor UserRegistry {
             };
         };
         return result_calendars;
-    };
-
-    // System function called after canister upgrade
-    system func postupgrade() {
-        initCalendarCanister();
-    };
-
-    // Helper module for common operations
-    module Nutzer {
-        public func get_or_default<X>(optVal : ?X, defaultVal : X) : X {
-            switch (optVal) {
-                case (null) return defaultVal;
-                case (?x) return x;
-            };
-        };
     };
 };
