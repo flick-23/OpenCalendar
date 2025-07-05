@@ -29,16 +29,16 @@ export const createActor = async <T>(
   identity?: Identity | null,
   host?: string
 ): Promise<ActorSubclass<T>> => {
-  const currentHost = host || (process.env.DFX_NETWORK === 'ic'
+  const currentHost = host || (import.meta.env.VITE_DFX_NETWORK === 'ic'
     ? 'https://icp-api.io'
-    : 'http://localhost:4943');
+    : 'http://127.0.0.1:8000');
 
   const agent = new HttpAgent({
     host: currentHost,
     identity: identity || undefined,
   });
 
-  if (process.env.DFX_NETWORK !== 'ic') {
+  if (import.meta.env.VITE_DFX_NETWORK !== 'ic') {
     try {
       await agent.fetchRootKey();
     } catch (error) {
@@ -55,17 +55,17 @@ export const createActor = async <T>(
 };
 
 export const getUserRegistryActor = async (identity?: Identity | null): Promise<ActorSubclass<UserRegistryService>> => {
-    const canisterId = userRegistryCanisterId || process.env.CANISTER_ID_USER_REGISTRY || 'ulvla-h7777-77774-qaacq-cai';
+    const canisterId = userRegistryCanisterId || import.meta.env.VITE_CANISTER_ID_USER_REGISTRY || 'ucwa4-rx777-77774-qaada-cai';
     
     console.log('getUserRegistryActor called with:', { 
         userRegistryCanisterId, 
         identity: identity ? 'present' : 'null',
-        processEnvUserRegistry: process.env.CANISTER_ID_USER_REGISTRY,
+        viteEnvUserRegistry: import.meta.env.VITE_CANISTER_ID_USER_REGISTRY,
         finalCanisterId: canisterId
     });
     
     if (!canisterId) {
-        console.error("User Registry Canister ID not found. Environment variables:", process.env);
+        console.error("User Registry Canister ID not found. Environment variables:", import.meta.env);
         throw new Error("User Registry Canister ID not found. Ensure it's in declarations or environment.");
     }
     
@@ -73,17 +73,17 @@ export const getUserRegistryActor = async (identity?: Identity | null): Promise<
 };
 
 export const getCalendarCanisterActor = async (identity?: Identity | null): Promise<ActorSubclass<CalendarCanisterService>> => {
-    const canisterId = calendarCanisterId || process.env.CANISTER_ID_CALENDAR_CANISTER_1 || 'uxrrr-q7777-77774-qaaaq-cai';
+    const canisterId = calendarCanisterId || import.meta.env.VITE_CANISTER_ID_CALENDAR_CANISTER_1 || 'uxrrr-q7777-77774-qaaaq-cai';
     
     console.log('getCalendarCanisterActor called with:', { 
         calendarCanisterId, 
         identity: identity ? 'present' : 'null',
-        processEnvCalendar: process.env.CANISTER_ID_CALENDAR_CANISTER_1,
+        viteEnvCalendar: import.meta.env.VITE_CANISTER_ID_CALENDAR_CANISTER_1,
         finalCanisterId: canisterId
     });
     
     if (!canisterId) {
-        console.error("Calendar Canister ID not found. Environment variables:", process.env);
+        console.error("Calendar Canister ID not found. Environment variables:", import.meta.env);
         throw new Error("Calendar Canister ID not found.");
     }
     

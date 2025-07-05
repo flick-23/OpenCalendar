@@ -105,14 +105,14 @@ export const initAuth = async (): Promise<void> => {
 
 // Helper function to get the Internet Identity URL
 const getInternetIdentityUrl = (): string => {
-  const isIC = process.env.DFX_NETWORK === 'ic';
+  const isIC = import.meta.env.VITE_DFX_NETWORK === 'ic';
   
   if (isIC) {
     return 'https://identity.ic0.app';
   }
   
   // For local development, use the local Internet Identity canister
-  const iiCanisterId = process.env.CANISTER_ID_INTERNET_IDENTITY;
+  const iiCanisterId = import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY;
   
   if (!iiCanisterId) {
     console.error('Internet Identity canister ID not found in environment variables');
