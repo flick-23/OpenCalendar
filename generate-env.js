@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const canisterIdsPath = path.join(__dirname, "../.dfx/local/canister_ids.json");
+const canisterIdsPath = path.join(__dirname, ".dfx/local/canister_ids.json");
 const envPath = path.join(__dirname, "src/frontend/.env");
 
 try {
