@@ -18,7 +18,8 @@ actor UserRegistry {
     // stable var simulatedNextCalendarId : Types.CalendarId = 0; // Removed for stability - no longer needed
 
     // This will be set by an admin/deployer after calendar_canister_1 is deployed.
-    var calendarCanisterPrincipal : ?Principal.Principal = null;
+    // Made stable to persist across deployments
+    stable var calendarCanisterPrincipal : ?Principal.Principal = null;
 
     // Define the interface for the CalendarCanister
     type CalendarCanisterActor = actor {
@@ -28,6 +29,23 @@ actor UserRegistry {
     };
 
     var calendarCanister1 : ?CalendarCanisterActor = null;
+
+    // Initialize calendar canister actor if principal is already set
+    // This is called on canister start/upgrade to restore the actor from stable storage
+    private func initCalendarCanister() : () {
+        switch (calendarCanisterPrincipal) {
+            case (null) {
+                Debug.print("UserRegistry: No calendar canister principal configured");
+            };
+            case (?id) {
+                calendarCanister1 := ?(actor (Principal.toText(id)) : CalendarCanisterActor);
+                Debug.print("UserRegistry: Calendar canister actor restored for ID " # Principal.toText(id));
+            };
+        };
+    };
+
+    // Call initialization on startup
+    initCalendarCanister();
 
     // Admin function to set the calendar canister principal
     // This should be restricted, e.g., to the controller of this canister.
@@ -127,6 +145,11 @@ actor UserRegistry {
             };
         };
         return result_calendars;
+    };
+
+    // System function called after canister upgrade
+    system func postupgrade() {
+        initCalendarCanister();
     };
 
     // Helper module for common operations
