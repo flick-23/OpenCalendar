@@ -1,7 +1,8 @@
 import { writable, type Writable, get } from 'svelte/store';
-import { authStore } from '$lib/stores/authStore'; // Fixed import
-import { createActor } from '$lib/actors/actors'; // Assuming this is the correct path
+import { identity as authIdentity, isLoggedIn as authIsLoggedIn } from '$lib/stores/authStore';
+import { createActor, getUserRegistryActor } from '$lib/actors/actors'; // Assuming this is the correct path
 import type { ActorSubclass, Identity } from '@dfinity/agent';
+import type { Principal } from '@dfinity/principal';
 
 // Import IDL, canister ID, and types from generated declarations
 import {
@@ -9,21 +10,29 @@ import {
     canisterId as actualCalendarCanisterId
 } from '$declarations/calendar_canister_1';
 import type {
-    _SERVICE as CalendarServiceType,
-    Event as BackendEventType,
-    // Calendar as BackendCalendarType // Uncomment if your .did file defines a Calendar type
+    _SERVICE as CalendarCanisterService, // Renamed for clarity
+    Event as BackendCalendarEvent,  // Renamed for clarity
+    CalendarId as BackendCalendarId, // explicit import
+    Timestamp as BackendTimestamp, // explicit import
+    EventId as BackendEventId // explicit import
 } from '$declarations/calendar_canister_1/calendar_canister_1.did';
+
+import type {
+    Calendar as UserRegistryCalendar,
+    _SERVICE as UserRegistryService
+} from '$declarations/user_registry/user_registry.did';
+
 
 // Type alias for IDs used in AppEvent and AppCalendar for clarity.
 // Backend uses Nat (bigint), frontend might use number or string for convenience.
 // We will need to convert these when calling actor methods.
-type AppId = bigint | number | string;
+type AppId = bigint; // Keep as bigint to align with backend, conversion at UI boundary if needed
 
 
 // Frontend Event type
 export interface AppEvent {
-  id: AppId; // Nat on backend (bigint)
-  calendarId: AppId; // Nat on backend (bigint)
+  id: AppId;
+  calendarId: AppId;
   title: string;
   description: string;
   startTime: Date;
@@ -31,247 +40,345 @@ export interface AppEvent {
   color: string;
 }
 
-// Frontend Calendar type (if managed by this store)
+// Frontend Calendar type - maps to UserRegistryCalendar
 export interface AppCalendar {
-  id: AppId; // Nat on backend (bigint)
-  owner: string; // Principal text
+  id: AppId;
+  owner: Principal; // Store as Principal object
   name: string;
   color: string;
 }
 
-// Helper to convert AppId to bigint for backend calls
-const toBackendId = (id: AppId): bigint => {
-    if (typeof id === 'bigint') return id;
-    if (typeof id === 'string') return BigInt(id);
-    return BigInt(id);
-};
+// Helper to convert AppId to bigint for backend calls (already aligning AppId with bigint)
+// const toBackendId = (id: AppId): bigint => id; // Not strictly needed if AppId is always bigint
 
 
 interface CalendarState {
   events: AppEvent[];
-  calendars: AppCalendar[];
-  isLoading: boolean;
+  calendars: AppCalendar[]; // This will hold UserRegistryCalendar transformed to AppCalendar
+  isLoadingEvents: boolean;
+  isLoadingCalendars: boolean;
   error: string | null;
   selectedCalendarId: AppId | null;
 }
 
 const initialState: CalendarState = {
   events: [],
-  calendars: [
-    { id: 1n, owner: 'system-mock', name: 'My Default Calendar', color: 'blue' } // Using bigint for mock ID
-  ],
-  isLoading: false,
+  calendars: [], // Initialize as empty, will be fetched
+  isLoadingEvents: false,
+  isLoadingCalendars: false,
   error: null,
-  selectedCalendarId: 1n, // Default to the first calendar's ID
+  selectedCalendarId: null, // No default selection until calendars are fetched
 };
 
 // Transform backend event (uses bigint for time) to frontend AppEvent (uses Date)
-const transformBackendEventToAppEvent = (backendEvent: BackendEventType): AppEvent => {
+const transformBackendEventToAppEvent = (backendEvent: BackendCalendarEvent): AppEvent => {
   return {
-    ...backendEvent,
-    // Ensure IDs from backend (bigint) are directly usable or converted if needed for AppEvent.id
-    // If AppEvent.id must be string/number, convert here: id: String(backendEvent.id)
-    id: backendEvent.id, // Assuming AppEvent.id can be bigint
-    calendarId: backendEvent.calendar_id, // field name from .did
-    startTime: new Date(Number(backendEvent.start_time / 1000000n)), // Nanoseconds to milliseconds
-    endTime: new Date(Number(backendEvent.end_time / 1000000n)),     // Nanoseconds to milliseconds
-    // description and color should map directly if names are the same
+    id: backendEvent.id,
+    calendarId: backendEvent.calendarId, // Corrected field name
+    title: backendEvent.title,
+    description: backendEvent.description,
+    startTime: new Date(Number(backendEvent.startTime / 1000000n)), // Nanoseconds to milliseconds
+    endTime: new Date(Number(backendEvent.endTime / 1000000n)),     // Nanoseconds to milliseconds
+    color: backendEvent.color,
   };
 };
 
-// Props for creating a new event, matching backend structure minus 'id'
-// This is based on a common structure for create_event: (title, description, startTime, endTime, color, calendarId)
-// Adjust if your `create_event` in .did expects a single record object.
-type CreateEventParams = Omit<BackendEventType, 'id'>;
+const transformUserRegistryCalendarToAppCalendar = (ucCalendar: UserRegistryCalendar): AppCalendar => {
+    return {
+        id: ucCalendar.id, // Assuming UserRegistryCalendar.id is bigint
+        owner: ucCalendar.owner, // Assuming UserRegistryCalendar.owner is Principal
+        name: ucCalendar.name,
+        color: ucCalendar.color,
+    };
+};
 
 
 export const calendarStore: Writable<CalendarState> & {
+  fetchUserCalendars: () => Promise<void>;
+  createNewUserCalendar: (name: string, color: string) => Promise<AppCalendar | null>;
+  setSelectedCalendar: (calendarId: AppId) => void;
   fetchEvents: (calendarId: AppId, start: Date, end: Date) => Promise<void>;
   createEvent: (eventData: Omit<AppEvent, 'id'>) => Promise<AppEvent | null>;
   updateEvent: (eventId: AppId, eventData: Partial<Omit<AppEvent, 'id' | 'calendarId'>>) => Promise<AppEvent | null>;
   deleteEvent: (eventId: AppId) => Promise<boolean>;
-  setSelectedCalendar: (calendarId: AppId) => void;
-  // TODO: Add methods for fetching/managing calendars if applicable
 } = (() => {
   const store = writable<CalendarState>(initialState);
-  let actor: ActorSubclass<CalendarServiceType> | null = null;
+  let calendarCanisterActor: ActorSubclass<CalendarCanisterService> | null = null;
+  let userRegistryActor: ActorSubclass<UserRegistryService> | null = null;
 
-  const getCalendarActor = async (): Promise<ActorSubclass<CalendarServiceType> | null> => {
-    if (actor) return actor; // Return cached actor if already created
+  const getCalendarCanisterActor = async (): Promise<ActorSubclass<CalendarCanisterService> | null> => {
+    if (calendarCanisterActor) return calendarCanisterActor;
 
-    const currentAuth = get(authStore);
-    if (!currentAuth.identity) {
-      store.update(s => ({ ...s, error: "User not authenticated" }));
+    const currentIdentity = get(authIdentity);
+    if (!currentIdentity) {
+      store.update(s => ({ ...s, error: "User not authenticated for calendar operations" }));
       return null;
     }
     try {
-      actor = await createActor<CalendarServiceType>(
-        actualCalendarCanisterId as string, // canisterId from $declarations
-        calendarCanisterIdlFactory,      // idlFactory from $declarations
-        currentAuth.identity
+        calendarCanisterActor = await createActor<CalendarCanisterService>(
+        actualCalendarCanisterId as string,
+        calendarCanisterIdlFactory,
+        currentIdentity
       );
-      return actor;
+      return calendarCanisterActor;
     } catch (err) {
-      console.error("Failed to create calendar actor:", err);
+      console.error("Failed to create calendar canister actor:", err);
       store.update(s => ({ ...s, error: "Failed to connect to calendar service" }));
       return null;
     }
   };
 
-  // Reset actor if identity changes (e.g., logout)
-  authStore.subscribe(auth => {
-    if (!auth.identity) {
-      actor = null;
+  const getUserRegistryActorInstance = async (): Promise<ActorSubclass<UserRegistryService> | null> => {
+    if (userRegistryActor) return userRegistryActor;
+
+    const currentIdentity = get(authIdentity);
+    if (!currentIdentity) {
+      store.update(s => ({ ...s, error: "User not authenticated for user registry operations" }));
+      return null;
+    }
+    try {
+        // Note: getUserRegistryActor is already defined in actors.ts, we should use that.
+        // This is a temporary local definition for clarity if actors.ts wasn't available.
+        // Re-using the one from actors.ts is preferred.
+        userRegistryActor = await getUserRegistryActor(currentIdentity);
+      return userRegistryActor;
+    } catch (err) {
+      console.error("Failed to create user registry actor:", err);
+      store.update(s => ({ ...s, error: "Failed to connect to user registry service" }));
+      return null;
+    }
+  };
+
+
+  // Reset actors if identity changes (e.g., logout)
+  authIdentity.subscribe(identity => {
+    if (!identity) {
+        calendarCanisterActor = null;
+        userRegistryActor = null;
+        // Clear store on logout
+        store.set(initialState);
+    } else {
+        // Optional: Auto-fetch user calendars when identity is available and user is logged in
+        if (get(authIsLoggedIn)) {
+            // This might be called multiple times if authIsLoggedIn updates separately.
+            // Consider a more robust trigger after full login sequence.
+            methods.fetchUserCalendars();
+        }
     }
   });
 
-
-  return {
+  const methods = {
     subscribe: store.subscribe,
     set: store.set,
     update: store.update,
 
+    fetchUserCalendars: async (): Promise<void> => {
+        store.update(s => ({ ...s, isLoadingCalendars: true, error: null }));
+        const urActor = await getUserRegistryActorInstance();
+        if (!urActor) {
+            store.update(s => ({ ...s, isLoadingCalendars: false, error: "User Registry actor not available" }));
+            return;
+        }
+        try {
+            console.log('Fetching user calendars from UserRegistry...');
+            const backendCalendars = await urActor.get_my_calendars();
+            const appCalendars = backendCalendars.map(transformUserRegistryCalendarToAppCalendar);
+            store.update(s => ({ ...s, calendars: appCalendars, isLoadingCalendars: false }));
+            console.log('User calendars fetched:', appCalendars);
+
+            if (appCalendars.length > 0) {
+                const currentSelectedId = get(store).selectedCalendarId;
+                const isValidSelection = appCalendars.some(cal => cal.id === currentSelectedId);
+                if (!currentSelectedId || !isValidSelection) {
+                    console.log('Auto-selecting first calendar:', appCalendars[0].id);
+                    store.update(s => ({ ...s, selectedCalendarId: appCalendars[0].id! }));
+                     // Fetch events for the auto-selected calendar
+                    methods.fetchEvents(appCalendars[0].id!, new Date(new Date().getFullYear(), new Date().getMonth(), 1), new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
+                }
+            } else {
+                store.update(s => ({ ...s, selectedCalendarId: null, events: [] })); // No calendars, clear events
+            }
+        } catch (err: any) {
+            console.error("Error fetching user calendars:", err);
+            store.update(s => ({ ...s, error: err.message || "Failed to fetch user calendars", isLoadingCalendars: false }));
+        }
+    },
+
+    createNewUserCalendar: async (name: string, color: string): Promise<AppCalendar | null> => {
+        store.update(s => ({ ...s, isLoadingCalendars: true, error: null }));
+        const urActor = await getUserRegistryActorInstance();
+        if (!urActor) {
+            store.update(s => ({ ...s, isLoadingCalendars: false, error: "User Registry actor not available" }));
+            return null;
+        }
+        try {
+            const newBackendCalendar = await urActor.create_calendar(name, color);
+            const newAppCalendar = transformUserRegistryCalendarToAppCalendar(newBackendCalendar);
+            // store.update(s => ({ ...s, calendars: [...s.calendars, newAppCalendar], isLoadingCalendars: false }));
+            // After creating, refresh all calendars to ensure consistency and selection logic
+            await methods.fetchUserCalendars();
+            // Optionally, select the new calendar
+            store.update(s => ({...s, selectedCalendarId: newAppCalendar.id}));
+            methods.fetchEvents(newAppCalendar.id!, new Date(new Date().getFullYear(), new Date().getMonth(), 1), new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
+            return newAppCalendar;
+        } catch (err: any) {
+            console.error("Error creating new user calendar:", err);
+            store.update(s => ({ ...s, error: err.message || "Failed to create new calendar", isLoadingCalendars: false }));
+            return null;
+        }
+    },
+
     setSelectedCalendar: (calendarId: AppId) => {
-      store.update(s => ({ ...s, selectedCalendarId: calendarId }));
-      // Consider fetching events for the new calendar here
+      store.update(s => ({ ...s, selectedCalendarId: calendarId, events: [] /* Clear events when calendar changes */ }));
+      // Fetch events for the new calendar. Define a default range or get from UI state.
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      methods.fetchEvents(calendarId, startOfMonth, endOfMonth);
     },
 
     fetchEvents: async (calendarId: AppId, start: Date, end: Date) => {
-      store.update(s => ({ ...s, isLoading: true, error: null }));
-      const currentActor = await getCalendarActor();
-      if (!currentActor) {
-        store.update(s => ({ ...s, isLoading: false, error: "Actor not available" }));
+      if (!calendarId) {
+        store.update(s => ({ ...s, events: [], error: "No calendar selected to fetch events for."}));
+        return;
+      }
+      store.update(s => ({ ...s, isLoadingEvents: true, error: null }));
+      const ccActor = await getCalendarCanisterActor();
+      if (!ccActor) {
+        store.update(s => ({ ...s, isLoadingEvents: false, error: "Calendar Canister actor not available" }));
         return;
       }
 
       try {
         const startTimeNano = BigInt(start.getTime()) * 1000000n;
         const endTimeNano = BigInt(end.getTime()) * 1000000n;
-        const backendCalendarId = toBackendId(calendarId);
 
-        console.log(`Fetching events for calendar ${backendCalendarId} from ${start.toISOString()} to ${end.toISOString()}`);
-        // Assuming get_events_for_range takes (calendarId: nat, start_time: int, end_time: int)
-        const backendEvents = await currentActor.get_events_for_range(backendCalendarId, startTimeNano, endTimeNano);
+        console.log(`Fetching events for calendar ${calendarId} from ${start.toISOString()} to ${end.toISOString()}`);
+        const backendEvents = await ccActor.get_events_for_range(calendarId, startTimeNano, endTimeNano);
 
         const appEvents = backendEvents.map(transformBackendEventToAppEvent);
-        store.update(s => ({ ...s, events: appEvents, isLoading: false }));
+        store.update(s => ({ ...s, events: appEvents, isLoadingEvents: false }));
       } catch (err: any) {
         console.error("Error fetching events:", err);
-        store.update(s => ({ ...s, error: err.message || "Failed to fetch events", isLoading: false }));
+        store.update(s => ({ ...s, error: err.message || "Failed to fetch events", isLoadingEvents: false }));
       }
     },
 
-    createEvent: async (eventData: Omit<AppEvent, 'id'>) => {
-      store.update(s => ({ ...s, isLoading: true, error: null }));
-      const currentActor = await getCalendarActor();
-      if (!currentActor) {
-        store.update(s => ({ ...s, isLoading: false, error: "Actor not available" }));
+    createEvent: async (eventData: Omit<AppEvent, 'id'>): Promise<AppEvent | null> => {
+      store.update(s => ({ ...s, isLoadingEvents: true, error: null }));
+      const ccActor = await getCalendarCanisterActor();
+      if (!ccActor) {
+        store.update(s => ({ ...s, isLoadingEvents: false, error: "Calendar Canister actor not available" }));
         return null;
       }
 
       try {
-        // Ensure eventData.calendarId is AppId and convert to bigint
-        const backendCalendarId = toBackendId(eventData.calendarId);
+        const backendCalendarId = eventData.calendarId; // Already AppId (bigint)
+        const title = eventData.title;
+        const description = eventData.description;
+        const startTimeNano = BigInt(eventData.startTime.getTime()) * 1000000n;
+        const endTimeNano = BigInt(eventData.endTime.getTime()) * 1000000n;
+        const color = eventData.color;
 
-        const params: CreateEventParams = {
-          calendar_id: backendCalendarId,
-          title: eventData.title,
-          description: eventData.description,
-          start_time: BigInt(eventData.startTime.getTime()) * 1000000n,
-          end_time: BigInt(eventData.endTime.getTime()) * 1000000n,
-          color: eventData.color,
-          // Ensure all fields required by BackendEventType (excluding 'id') are present
-        };
-        console.log("Creating event with params:", params);
-        // Assuming create_event takes an object matching CreateEventParams
-        const backendEvent = await currentActor.create_event(params);
+        console.log("Creating event with params:", backendCalendarId, title, description, startTimeNano, endTimeNano, color);
+        const backendEvent = await ccActor.create_event(
+            backendCalendarId,
+            title,
+            description,
+            startTimeNano,
+            endTimeNano,
+            color
+        );
 
         const newAppEvent = transformBackendEventToAppEvent(backendEvent);
         store.update(s => ({
           ...s,
-          events: [...s.events, newAppEvent],
-          isLoading: false
+          events: [...s.events, newAppEvent].sort((a,b) => a.startTime.getTime() - b.startTime.getTime()), // Keep sorted
+          isLoadingEvents: false
         }));
         return newAppEvent;
       } catch (err: any) {
         console.error("Error creating event:", err);
-        store.update(s => ({ ...s, error: err.message || "Failed to create event", isLoading: false }));
+        store.update(s => ({ ...s, error: err.message || "Failed to create event", isLoadingEvents: false }));
         return null;
       }
     },
 
-    updateEvent: async (eventId: AppId, eventData: Partial<Omit<AppEvent, 'id' | 'calendarId'>>) => {
-      store.update(s => ({ ...s, isLoading: true, error: null }));
-      const currentActor = await getCalendarActor();
-      if (!currentActor) {
-        store.update(s => ({ ...s, isLoading: false, error: "Actor not available" }));
+    updateEvent: async (eventId: AppId, eventData: Partial<Omit<AppEvent, 'id' | 'calendarId'>>): Promise<AppEvent | null> => {
+      store.update(s => ({ ...s, isLoadingEvents: true, error: null }));
+      const ccActor = await getCalendarCanisterActor();
+      if (!ccActor) {
+        store.update(s => ({ ...s, isLoadingEvents: false, error: "Calendar Canister actor not available" }));
         return null;
       }
 
       try {
-        // Construct the partial backend event data.
-        // The backend `update_event` likely takes (eventId: nat, updates: record)
-        // `updates` should only contain fields that are actually changing.
-        const backendUpdates: Partial<Omit<BackendEventType, 'id' | 'calendar_id'>> = {};
-        if (eventData.title !== undefined) backendUpdates.title = eventData.title;
-        if (eventData.description !== undefined) backendUpdates.description = eventData.description;
-        if (eventData.startTime !== undefined) backendUpdates.start_time = BigInt(eventData.startTime.getTime()) * 1000000n;
-        if (eventData.endTime !== undefined) backendUpdates.end_time = BigInt(eventData.endTime.getTime()) * 1000000n;
-        if (eventData.color !== undefined) backendUpdates.color = eventData.color;
+        const newTitleOpt = eventData.title !== undefined ? [eventData.title] : [];
+        const newDescriptionOpt = eventData.description !== undefined ? [eventData.description] : [];
+        const newStartTimeOpt = eventData.startTime !== undefined ? [BigInt(eventData.startTime.getTime()) * 1000000n] : [];
+        const newEndTimeOpt = eventData.endTime !== undefined ? [BigInt(eventData.endTime.getTime()) * 1000000n] : [];
+        const newColorOpt = eventData.color !== undefined ? [eventData.color] : [];
 
-        const backendEventId = toBackendId(eventId);
+        console.log(`Updating event ${eventId} with data:`, eventData);
+        const result = await ccActor.update_event(
+            eventId,
+            newTitleOpt,
+            newDescriptionOpt,
+            newStartTimeOpt,
+            newEndTimeOpt,
+            newColorOpt
+        );
 
-        console.log(`Updating event ${backendEventId} with data:`, backendUpdates);
-        // Assuming update_event takes (eventId: nat, updates: YourPartialBackendEventRecord)
-        // The exact structure of `backendUpdates` needs to match what `update_event` expects.
-        // If it expects all optional fields, this is fine.
-        const updatedBackendEvent = await currentActor.update_event(backendEventId, backendUpdates);
-
-        const updatedAppEvent = transformBackendEventToAppEvent(updatedBackendEvent);
-        store.update(s => ({
-          ...s,
-          events: s.events.map(e => (toBackendId(e.id)) === backendEventId ? updatedAppEvent : e),
-          isLoading: false
-        }));
-        return updatedAppEvent;
+        if (result.length > 0) {
+            const updatedBackendEvent = result[0];
+            const updatedAppEvent = transformBackendEventToAppEvent(updatedBackendEvent);
+            store.update(s => ({
+              ...s,
+              events: s.events.map(e => e.id === eventId ? updatedAppEvent : e).sort((a,b) => a.startTime.getTime() - b.startTime.getTime()),
+              isLoadingEvents: false
+            }));
+            return updatedAppEvent;
+        } else {
+            store.update(s => ({ ...s, error: "Failed to update event (no event returned)", isLoadingEvents: false }));
+            return null;
+        }
       } catch (err: any) {
         console.error("Error updating event:", err);
-        store.update(s => ({ ...s, error: err.message || "Failed to update event", isLoading: false }));
+        store.update(s => ({ ...s, error: err.message || "Failed to update event", isLoadingEvents: false }));
         return null;
       }
     },
 
-    deleteEvent: async (eventId: AppId) => {
-      store.update(s => ({ ...s, isLoading: true, error: null }));
-      const currentActor = await getCalendarActor();
-      if (!currentActor) {
-        store.update(s => ({ ...s, isLoading: false, error: "Actor not available" }));
+    deleteEvent: async (eventId: AppId): Promise<boolean> => {
+      store.update(s => ({ ...s, isLoadingEvents: true, error: null }));
+      const ccActor = await getCalendarCanisterActor();
+      if (!ccActor) {
+        store.update(s => ({ ...s, isLoadingEvents: false, error: "Calendar Canister actor not available" }));
         return false;
       }
 
       try {
-        const backendEventId = toBackendId(eventId);
-        console.log(`Deleting event ${backendEventId}`);
-        const success = await currentActor.delete_event(backendEventId);
+        console.log(`Deleting event ${eventId}`);
+        const success = await ccActor.delete_event(eventId);
 
         if (success) {
           store.update(s => ({
             ...s,
-            events: s.events.filter(e => toBackendId(e.id) !== backendEventId),
-            isLoading: false
+            events: s.events.filter(e => e.id !== eventId),
+            isLoadingEvents: false
           }));
         } else {
-          // This case might not be reachable if backend throws error on failure
-          store.update(s => ({ ...s, error: "Failed to delete event on backend (returned false)", isLoading: false }));
+          store.update(s => ({ ...s, error: "Failed to delete event on backend (returned false)", isLoadingEvents: false }));
         }
         return success;
       } catch (err: any) {
         console.error("Error deleting event:", err);
-        store.update(s => ({ ...s, error: err.message || "Failed to delete event", isLoading: false }));
+        store.update(s => ({ ...s, error: err.message || "Failed to delete event", isLoadingEvents: false }));
         return false;
       }
     }
   };
+  return methods;
 })();
 
 // Remove mock data initialization or make it strictly conditional if needed for dev

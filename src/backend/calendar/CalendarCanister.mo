@@ -39,6 +39,13 @@ actor CalendarCanister {
         return newCalendar;
     };
 
+    public shared query (msg) func get_calendar_details(calendarId : Types.CalendarId) : async ?Types.Calendar {
+        // No authentication check here as UserRegistry is the one calling this,
+        // and it already knows the user owns this calendarId (implicitly).
+        // If users were to call this directly, we'd need an ownership/permission check.
+        return calendars.get(calendarId);
+    };
+
     public shared (msg) func create_event(calendarId : Types.CalendarId, title : Text, description : Text, startTime : Types.Timestamp, endTime : Types.Timestamp, color : Text) : async Types.Event {
         let caller = msg.caller;
 
