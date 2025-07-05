@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Setting up ICP Calendar canisters after deployment..."
+echo "Setting up OpenCalendar canisters after deployment..."
 
 # Get canister IDs
 CALENDAR_CANISTER_ID=$(dfx canister id calendar_canister_1)
@@ -20,5 +20,5 @@ else
     exit 1
 fi
 
-echo "🎉 Setup completed! Your ICP Calendar is ready to use."
+echo "🎉 Setup completed! Your OpenCalendar is ready to use."
 echo "Frontend URL: http://$(dfx canister id frontend).localhost:8000/"

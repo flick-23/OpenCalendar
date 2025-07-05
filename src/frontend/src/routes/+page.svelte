@@ -120,7 +120,7 @@
 </script>
 
 <svelte:head>
-	<title>ICP Calendar</title>
+	<title>OpenCalendar</title>
 	<meta name="description" content="A simple calendar application" />
 </svelte:head>
 

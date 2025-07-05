@@ -20,7 +20,7 @@
 	{#if $isLoggedIn}
 		<header class="bg-blue-600 text-white p-4 shadow-md">
 			<div class="container mx-auto flex justify-between items-center">
-				<a href="/" class="text-xl font-bold">ICP Calendar</a>
+				<a href="/" class="text-xl font-bold">OpenCalendar</a>
 				<nav>
 					<!-- Navigation links can go here -->
 					<!-- e.g., <a href="/calendar" class="px-3">Calendar</a> -->
@@ -48,7 +48,7 @@
 
 	{#if $isLoggedIn}
 		<footer class="text-center p-4 mt-8 text-gray-600 text-sm">
-			ICP Calendar App &copy; {new Date().getFullYear()}
+			OpenCalendar App &copy; {new Date().getFullYear()}
 		</footer>
 	{/if}
 </div>

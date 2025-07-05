@@ -46,7 +46,7 @@
 
 <div class="flex items-center justify-center min-h-screen bg-gray-200">
 	<div class="p-8 bg-white shadow-xl rounded-lg max-w-md w-full">
-		<h1 class="text-3xl font-bold text-center text-blue-600 mb-6">ICP Calendar Login</h1>
+		<h1 class="text-3xl font-bold text-center text-blue-600 mb-6">OpenCalendar Login</h1>
 
 		{#if errorMessage}
 			<div

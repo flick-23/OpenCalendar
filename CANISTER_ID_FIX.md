@@ -1,4 +1,4 @@
-# Fixing Canister ID Issues in ICP Calendar
+# Fixing Canister ID Issues in OpenCalendar
 
 ## Problem
 
