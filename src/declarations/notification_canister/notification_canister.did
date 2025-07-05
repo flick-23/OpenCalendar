@@ -1,6 +1,7 @@
 type Timestamp = int;
 type Principal = principal;
 service : {
-  send_event_reminder: (Principal, text, Timestamp) -> (bool);
+  send_event_reminder: (user: Principal, event_title: text, reminder_time:
+   Timestamp) -> (bool);
   status: () -> (text) query;
 }

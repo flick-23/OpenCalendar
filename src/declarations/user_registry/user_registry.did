@@ -13,8 +13,8 @@ type Calendar =
    owner: Principal;
  };
 service : {
-  create_calendar: (text, text) -> (Calendar);
+  create_calendar: (name: text, color: text) -> (Calendar);
   get_my_calendars: () -> (vec Calendar);
-  get_my_profile: () -> (opt UserProfile);
-  register: (text) -> (UserProfile);
+  get_my_profile: () -> (opt UserProfile) query;
+  register: (name: text) -> (UserProfile);
 }
