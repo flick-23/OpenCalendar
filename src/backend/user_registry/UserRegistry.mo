@@ -2,9 +2,9 @@ import HashMap "mo:base/HashMap";
 import Principal "mo:base/Principal";
 import Types "../types";
 import Array "mo:base/Array";
-import Result "mo:base/Result"; // For more structured error handling if needed later
 import Error "mo:base/Error"; // For error handling
 import Debug "mo:base/Debug"; // For debug printing
+import Nat "mo:base/Nat"; // For Nat.toText
 
 actor UserRegistry {
 
@@ -15,15 +15,15 @@ actor UserRegistry {
 
     // This counter is a simplification. In a robust system, CalendarCanister would generate its own IDs.
     // UserRegistry would then receive this ID from CalendarCanister upon successful creation.
-    // stable var simulatedNextCalendarId : Types.CalendarId = 0; // No longer needed
+    // stable var simulatedNextCalendarId : Types.CalendarId = 0; // Removed for stability - no longer needed
 
     // This will be set by an admin/deployer after calendar_canister_1 is deployed.
     var calendarCanisterPrincipal : ?Principal.Principal = null;
 
     // Define the interface for the CalendarCanister
-    actor class CalendarCanisterActor(id : Principal.Principal) {
-        public shared query func get_calendar_details(calendarId : Types.CalendarId) : async ?Types.Calendar;
-        public shared func create_calendar_internal(owner : Principal.Principal, name : Text, color : Text) : async Types.Calendar;
+    type CalendarCanisterActor = actor {
+        get_calendar_details : shared query (calendarId : Types.CalendarId) -> async ?Types.Calendar;
+        create_calendar_internal : shared (owner : Principal.Principal, name : Text, color : Text) -> async Types.Calendar;
         // Add other functions from CalendarCanister that UserRegistry might need to call
     };
 
@@ -36,15 +36,14 @@ actor UserRegistry {
     // for typical dfx usage if not making the method overly public (e.g. through a wallet).
     // For simplicity here, we'll rely on the default controller restrictions for update calls.
     // A production system should have stronger, explicit authorization.
-    public shared (msg) func set_calendar_canister_id(id : Principal.Principal) : async () {
+    public shared (_msg) func set_calendar_canister_id(id : Principal.Principal) : async () {
         // TODO: Add a proper authorization check here in a production environment
         // e.g., check if msg.caller is in a list of admin principals or is the canister controller.
         // For now, this function is callable by any controller of this canister.
         calendarCanisterPrincipal := ?id;
-        calendarCanister1 := ?CalendarCanisterActor(id);
+        calendarCanister1 := ?(actor (Principal.toText(id)) : CalendarCanisterActor);
         Debug.print("UserRegistry: Calendar canister ID set to " # Principal.toText(id));
     };
-
 
     public shared (msg) func register(name : Text) : async Types.UserProfile {
         let caller = msg.caller;
@@ -75,8 +74,10 @@ actor UserRegistry {
         };
 
         let currentCalendarCanister = switch (calendarCanister1) {
-            case (null) { throw Error.reject("Calendar canister service not configured in UserRegistry."); };
-            case (?actor) actor;
+            case (null) {
+                throw Error.reject("Calendar canister service not configured in UserRegistry.");
+            };
+            case (?canister) canister;
         };
 
         // Actual Inter-Canister Call
@@ -109,10 +110,11 @@ actor UserRegistry {
                 return [];
                 // throw Error.reject("Calendar canister service not configured in UserRegistry.");
             };
-            case (?actor) actor;
+            case (?canister) canister;
         };
 
-        for ((id, _name) in calendarRefs.vals()) { // _name from userCalendarsMap is not strictly needed now
+        for ((id, _name) in calendarRefs.vals()) {
+            // _name from userCalendarsMap is not strictly needed now
             let calendarDetails = await currentCalendarCanister.get_calendar_details(id);
             switch (calendarDetails) {
                 case (null) {

@@ -15,7 +15,6 @@
 	// Use a reactive declaration for selectedViewLabel to ensure it updates when currentView changes.
 	// $: selectedViewLabel = viewOptions.find(opt => opt.value === currentView)?.label || 'Month';
 
-
 	function setCurrentView(event: Event) {
 		const selectElement = event.target as HTMLSelectElement;
 		const newView = selectElement.value as 'month' | 'day' | 'year';
@@ -36,21 +35,24 @@
 		if (currentView === 'month') {
 			return displayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 		} else if (currentView === 'day') {
-			return displayDate.toLocaleDateString('default', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+			return displayDate.toLocaleDateString('default', {
+				weekday: 'long',
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric'
+			});
 		} else if (currentView === 'year') {
 			return displayDate.getFullYear().toString();
 		}
 		return displayDate.toLocaleDateString(); // Fallback
 	})();
-
 </script>
 
 <header class="px-4 py-2 flex items-center bg-white shadow sticky top-0 z-50">
 	<!-- Logo and App Name -->
 	<img src="/favicon.svg" alt="Calendar Icon" class="h-8 w-8 mr-2" />
-	<h1 class="mr-10 text-xl text-gray-500 font-bold hidden sm:block"> {/* Hide on very small screens */}
-		Calendar
-	</h1>
+	<!-- Hide on very small screens -->
+	<h1 class="mr-10 text-xl text-gray-500 font-bold hidden sm:block">Calendar</h1>
 
 	<!-- Today Button -->
 	<button
@@ -81,7 +83,10 @@
 	</button>
 
 	<!-- Current Period Display -->
-	<h2 class="ml-2 sm:ml-4 text-lg sm:text-xl text-gray-700 font-medium whitespace-nowrap overflow-hidden text-ellipsis" style="min-width: 120px; max-width: 300px;">
+	<h2
+		class="ml-2 sm:ml-4 text-lg sm:text-xl text-gray-700 font-medium whitespace-nowrap overflow-hidden text-ellipsis"
+		style="min-width: 120px; max-width: 300px;"
+	>
 		{periodLabel}
 	</h2>
 
@@ -94,16 +99,21 @@
 		<span class="material-icons-outlined text-blue-600">add</span>
 	</button>
 
-
 	<!-- Right side elements (Search, Support, Settings, View Dropdown) -->
 	<div class="ml-auto flex items-center space-x-1 sm:space-x-2">
-		<button class="p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex">
+		<button
+			class="p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+		>
 			<span class="material-icons-outlined text-gray-600">search</span>
 		</button>
-		<button class="p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex">
+		<button
+			class="p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+		>
 			<span class="material-icons-outlined text-gray-600">help_outline</span>
 		</button>
-		<button class="p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex">
+		<button
+			class="p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+		>
 			<span class="material-icons-outlined text-gray-600">settings</span>
 		</button>
 
@@ -119,13 +129,17 @@
 					<option value={option.value}>{option.label}</option>
 				{/each}
 			</select>
-			 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
-                <span class="material-icons-outlined text-sm">arrow_drop_down</span>
-            </div>
+			<div
+				class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600"
+			>
+				<span class="material-icons-outlined text-sm">arrow_drop_down</span>
+			</div>
 		</div>
 
 		<!-- Profile/Account Icon -->
-		<button class="ml-1 sm:ml-3 p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 hidden sm:inline-flex">
+		<button
+			class="ml-1 sm:ml-3 p-1 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 hidden sm:inline-flex"
+		>
 			<span class="material-icons-outlined text-gray-600">account_circle</span>
 		</button>
 	</div>

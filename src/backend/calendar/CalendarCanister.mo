@@ -2,18 +2,17 @@ import HashMap "mo:base/HashMap";
 import Principal "mo:base/Principal";
 import Array "mo:base/Array";
 import TrieMap "mo:base/TrieMap";
-import Result "mo:base/Result";
 import Option "mo:base/Option";
 import Error "mo:base/Error";
 import Nat "mo:base/Nat";
 import Int "mo:base/Int";
-import Hash "mo:base/Hash"; // Still imported, but be aware of deprecation warnings for `Hash.hash`
+import Hash "mo:base/Hash";
+import Debug "mo:base/Debug";
 import Types "../types";
 
 actor CalendarCanister {
 
-    // Warnings about `Hash.hash` being deprecated for large Nat values.
-    // For typical ID usage, this might be acceptable, but for very large Nats, consider a custom hash.
+    // Using proper hash functions for HashMap
     private var calendars : HashMap.HashMap<Types.CalendarId, Types.Calendar> = HashMap.HashMap<Types.CalendarId, Types.Calendar>(0, Nat.equal, Hash.hash);
     private var events : HashMap.HashMap<Types.EventId, Types.Event> = HashMap.HashMap<Types.EventId, Types.Event>(0, Nat.equal, Hash.hash);
 
@@ -23,7 +22,7 @@ actor CalendarCanister {
     private stable var nextCalendarId : Types.CalendarId = 0;
     private stable var nextEventId : Types.EventId = 0;
 
-    public shared (msg) func create_calendar_internal(owner : Principal, name : Text, color : Text) : async Types.Calendar {
+    public shared (_msg) func create_calendar_internal(owner : Principal, name : Text, color : Text) : async Types.Calendar {
         let id = nextCalendarId;
         nextCalendarId += 1;
 
@@ -39,7 +38,7 @@ actor CalendarCanister {
         return newCalendar;
     };
 
-    public shared query (msg) func get_calendar_details(calendarId : Types.CalendarId) : async ?Types.Calendar {
+    public shared query (_msg) func get_calendar_details(calendarId : Types.CalendarId) : async ?Types.Calendar {
         // No authentication check here as UserRegistry is the one calling this,
         // and it already knows the user owns this calendarId (implicitly).
         // If users were to call this directly, we'd need an ownership/permission check.
@@ -47,10 +46,10 @@ actor CalendarCanister {
     };
 
     public shared (msg) func create_event(calendarId : Types.CalendarId, title : Text, description : Text, startTime : Types.Timestamp, endTime : Types.Timestamp, color : Text) : async Types.Event {
-        let caller = msg.caller;
+        let _caller = msg.caller;
 
         // Using Nutzer.get_or_crash for cleaner error handling
-        let calendar = Nutzer.get_or_crash(calendars.get(calendarId), "Calendar not found with ID: " # Nat.toText(calendarId));
+        let _calendar = Nutzer.get_or_crash(calendars.get(calendarId), "Calendar not found with ID: " # Nat.toText(calendarId));
 
         if (startTime >= endTime) {
             throw Error.reject("Event start time must be before end time.");
@@ -225,7 +224,10 @@ actor CalendarCanister {
 
         public func get_or_crash<X>(optVal : ?X, message : Text) : X {
             switch (optVal) {
-                // case (null) { throw Error.reject(message); };
+                case (null) {
+                    // In Motoko, we use Debug.trap() for fatal errors
+                    Debug.trap(message);
+                };
                 case (?x) x;
             };
         };

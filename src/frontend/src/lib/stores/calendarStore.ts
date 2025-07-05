@@ -26,7 +26,7 @@ import type {
 // Type alias for IDs used in AppEvent and AppCalendar for clarity.
 // Backend uses Nat (bigint), frontend might use number or string for convenience.
 // We will need to convert these when calling actor methods.
-type AppId = bigint; // Keep as bigint to align with backend, conversion at UI boundary if needed
+export type AppId = bigint; // Keep as bigint to align with backend, conversion at UI boundary if needed
 
 
 // Frontend Event type

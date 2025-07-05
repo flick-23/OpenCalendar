@@ -55,12 +55,13 @@ export const createActor = async <T>(
 };
 
 export const getUserRegistryActor = async (identity?: Identity | null): Promise<ActorSubclass<UserRegistryService>> => {
-    const canisterId = userRegistryCanisterId || import.meta.env.VITE_CANISTER_ID_USER_REGISTRY || 'ucwa4-rx777-77774-qaada-cai';
+    // Use environment variable first, then hardcoded fallback
+    const canisterId = import.meta.env.VITE_CANISTER_ID_USER_REGISTRY || userRegistryCanisterId || 'ucwa4-rx777-77774-qaada-cai';
     
     console.log('getUserRegistryActor called with:', { 
+        envUserRegistry: import.meta.env.VITE_CANISTER_ID_USER_REGISTRY,
         userRegistryCanisterId, 
         identity: identity ? 'present' : 'null',
-        viteEnvUserRegistry: import.meta.env.VITE_CANISTER_ID_USER_REGISTRY,
         finalCanisterId: canisterId
     });
     

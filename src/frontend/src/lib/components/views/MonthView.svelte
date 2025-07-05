@@ -108,13 +108,19 @@
 		<div>Fri</div>
 		<div>Sat</div>
 	</div>
-	<div class="grid grid-cols-7 grid-rows-5 min-h-[calc(100vh-200px)]"> {/* Adjust min-height as needed */}
+	<div class="grid grid-cols-7 grid-rows-5 min-h-[calc(100vh-200px)]"><!-- Adjust min-height as needed -->
 		{#each daysInGrid as dayItem (dayItem.date.toISOString())}
 			<div
 				class="day-cell border border-gray-200 p-2 flex flex-col relative hover:bg-gray-50"
 				class:not-current-month={!dayItem.isCurrentMonth}
 				class:today={dayItem.isToday && dayItem.isCurrentMonth}
 				on:click={() => handleDayClick(dayItem)}
+				on:keydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						handleDayClick(dayItem);
+					}
+				}}
 				role="button"
 				tabindex="0"
 				aria-label={`Date ${dayItem.date.toLocaleDateString()}`}
