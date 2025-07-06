@@ -104,23 +104,25 @@
 	$: currentTimePosition = getCurrentTimePosition();
 </script>
 
-<div class="day-view bg-white">
-	<div class="day-header text-center mb-6">
-		<h2 class="text-2xl font-bold text-gray-800">{currentDayFormatted}</h2>
+<div class="day-view bg-white min-h-[calc(100vh-80px)] px-4 sm:px-6 lg:px-8">
+	<div class="day-header text-center mb-8 pt-6">
+		<h2 class="text-[#111418] text-2xl font-bold leading-tight tracking-[-0.015em]">
+			{currentDayFormatted}
+		</h2>
 		{#if displayDate.getDate() === new Date().getDate() && displayDate.getMonth() === new Date().getMonth() && displayDate.getFullYear() === new Date().getFullYear()}
-			<p class="text-sm text-blue-600 mt-1">Today</p>
+			<p class="text-[#0c7ff2] text-sm font-medium mt-1">Today</p>
 		{/if}
 	</div>
 
 	<!-- All-day events section -->
 	{#if allDayEvents.length > 0}
-		<div class="all-day-events mb-6 p-4 bg-gray-50 rounded-lg">
-			<h3 class="text-sm font-semibold text-gray-700 mb-2">All Day</h3>
+		<div class="all-day-events mb-8 p-4 bg-[#f8f9fa] rounded-lg border border-[#f0f2f5]">
+			<h3 class="text-[#111418] text-sm font-bold leading-normal mb-3">All Day</h3>
 			<div class="space-y-2">
 				{#each allDayEvents as event}
 					<div
-						class="event-item p-2 rounded text-white text-sm cursor-pointer hover:opacity-90"
-						style:background-color={event.color || '#3b82f6'}
+						class="event-item p-3 rounded-lg text-white text-sm cursor-pointer hover:opacity-90 transition-all shadow-sm"
+						style:background-color={event.color || '#0c7ff2'}
 						on:click={() => handleEventClick(event)}
 						on:keydown={(e) => {
 							if (e.key === 'Enter' || e.key === ' ') {
@@ -131,9 +133,9 @@
 						role="button"
 						tabindex="0"
 					>
-						<div class="font-medium">{event.title}</div>
+						<div class="font-medium leading-normal">{event.title}</div>
 						{#if event.description}
-							<div class="text-xs opacity-90 mt-1">{event.description}</div>
+							<div class="text-xs opacity-90 mt-1 leading-normal">{event.description}</div>
 						{/if}
 					</div>
 				{/each}
@@ -142,15 +144,17 @@
 	{/if}
 
 	<!-- Timeline view -->
-	<div class="timeline-container relative">
+	<div
+		class="timeline-container relative bg-white border border-[#f0f2f5] rounded-lg overflow-hidden"
+	>
 		<!-- Current time indicator -->
 		{#if currentTimePosition >= 0}
 			<div
-				class="current-time-line absolute left-0 right-0 h-0.5 bg-red-500 z-10 flex items-center"
+				class="current-time-line absolute left-0 right-0 h-0.5 bg-[#0c7ff2] z-10 flex items-center"
 				style:top="{currentTimePosition}%"
 			>
-				<div class="w-3 h-3 bg-red-500 rounded-full -ml-1.5"></div>
-				<div class="text-xs text-red-500 ml-2 bg-white px-1">
+				<div class="w-3 h-3 bg-[#0c7ff2] rounded-full -ml-1.5"></div>
+				<div class="text-xs text-[#0c7ff2] ml-2 bg-white px-2 py-1 rounded font-medium">
 					{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 				</div>
 			</div>
@@ -160,7 +164,7 @@
 		<div class="time-slots">
 			{#each timeSlots as slot}
 				<div
-					class="time-slot flex border-b border-gray-100 hover:bg-gray-50 cursor-pointer relative"
+					class="time-slot flex border-b border-[#f0f2f5] hover:bg-[#f8f9fa] cursor-pointer relative transition-colors"
 					on:click={() => handleTimeSlotClick(slot.hour)}
 					on:keydown={(e) => {
 						if (e.key === 'Enter' || e.key === ' ') {
@@ -171,14 +175,16 @@
 					role="button"
 					tabindex="0"
 				>
-					<div class="time-label w-20 flex-shrink-0 text-xs text-gray-500 text-right pr-4 py-2">
+					<div
+						class="time-label w-20 flex-shrink-0 text-xs text-[#9ca3af] text-right pr-4 py-3 font-medium"
+					>
 						{slot.timeLabel}
 					</div>
-					<div class="time-content flex-1 min-h-[60px] py-2 px-4 relative">
+					<div class="time-content flex-1 min-h-[60px] py-3 px-4 relative">
 						{#each slot.events as event}
 							<div
-								class="event-item absolute left-4 right-4 p-2 rounded text-white text-sm cursor-pointer hover:opacity-90 z-20"
-								style:background-color={event.color || '#3b82f6'}
+								class="event-item absolute left-4 right-4 p-3 rounded-lg text-white text-sm cursor-pointer hover:opacity-90 hover:shadow-md transition-all z-20"
+								style:background-color={event.color || '#0c7ff2'}
 								on:click|stopPropagation={() => handleEventClick(event)}
 								on:keydown={(e) => {
 									if (e.key === 'Enter' || e.key === ' ') {
@@ -189,11 +195,11 @@
 								role="button"
 								tabindex="0"
 							>
-								<div class="font-medium">{event.title}</div>
+								<div class="font-medium leading-normal">{event.title}</div>
 								{#if event.description}
-									<div class="text-xs opacity-90 mt-1">{event.description}</div>
+									<div class="text-xs opacity-90 mt-1 leading-normal">{event.description}</div>
 								{/if}
-								<div class="text-xs opacity-75 mt-1">
+								<div class="text-xs opacity-75 mt-1 leading-normal">
 									{new Date(event.startTime).toLocaleTimeString([], {
 										hour: '2-digit',
 										minute: '2-digit'
@@ -214,21 +220,33 @@
 
 <style lang="postcss">
 	.day-view {
-		@apply p-4 max-w-4xl mx-auto;
+		max-width: 1200px;
+		margin: 0 auto;
 	}
+
 	.timeline-container {
-		@apply border border-gray-200 rounded-lg overflow-hidden;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
+
 	.time-slot {
-		@apply transition-colors duration-150;
+		transition: all 0.2s ease;
 	}
+
 	.time-slot:hover {
-		@apply bg-blue-50;
+		background-color: #f8f9fa;
 	}
+
 	.event-item {
-		@apply shadow-sm;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		background: linear-gradient(135deg, var(--event-color, #0c7ff2), var(--event-color, #0c7ff2));
 	}
+
+	.event-item:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+	}
+
 	.current-time-line {
-		@apply pointer-events-none;
+		pointer-events: none;
 	}
 </style>

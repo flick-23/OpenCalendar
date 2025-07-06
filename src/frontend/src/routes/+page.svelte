@@ -106,23 +106,38 @@
 </svelte:head>
 
 {#if showRegistration}
-	<div class="registration-form bg-white p-8 rounded-lg shadow-md max-w-md mx-auto my-10">
-		<h2 class="text-xl font-semibold text-center mb-6">Welcome! Please Register</h2>
-		{#if registrationError}<p class="text-red-500 text-sm mb-4">{registrationError}</p>{/if}
-		<input
-			type="text"
-			bind:value={registrationName}
-			placeholder="Your Name"
-			class="w-full px-3 py-2 border rounded mb-4"
-			disabled={registrationLoading}
-		/>
-		<button
-			on:click={handleRegistration}
-			disabled={registrationLoading}
-			class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded disabled:opacity-75"
+	<div
+		class="min-h-screen bg-white flex items-center justify-center px-4"
+		style="font-family: 'Plus Jakarta Sans', 'Noto Sans', sans-serif;"
+	>
+		<div
+			class="registration-form bg-white p-8 rounded-lg shadow-lg border border-[#f0f2f5] max-w-md w-full"
 		>
-			{#if registrationLoading}Registering...{:else}Register{/if}
-		</button>
+			<h2
+				class="text-[#111418] text-2xl font-bold leading-tight tracking-[-0.015em] text-center mb-6"
+			>
+				Welcome! Please Register
+			</h2>
+			{#if registrationError}
+				<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+					<p class="text-red-600 text-sm font-medium">{registrationError}</p>
+				</div>
+			{/if}
+			<input
+				type="text"
+				bind:value={registrationName}
+				placeholder="Your Name"
+				class="w-full px-3 py-2 border border-[#f0f2f5] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0c7ff2] focus:border-[#0c7ff2] text-[#111418] bg-white mb-4"
+				disabled={registrationLoading}
+			/>
+			<button
+				on:click={handleRegistration}
+				disabled={registrationLoading}
+				class="w-full flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-[#0c7ff2] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#0a6fd1] transition-colors disabled:opacity-50"
+			>
+				{#if registrationLoading}Registering...{:else}Register{/if}
+			</button>
+		</div>
 	</div>
 {:else if $isLoggedIn && $userProfile}
 	<CalendarComponent />
@@ -397,13 +412,13 @@
 									<a href="#features" class="text-[#111418] hover:text-[#0c7ff2] transition-colors"
 										>Features</a
 									>
-									<a href="#" class="text-[#111418] hover:text-[#0c7ff2] transition-colors"
-										>Privacy</a
+									<button class="text-[#111418] hover:text-[#0c7ff2] transition-colors"
+										>Privacy</button
 									>
-									<a href="#" class="text-[#111418] hover:text-[#0c7ff2] transition-colors"
-										>Support</a
+									<button class="text-[#111418] hover:text-[#0c7ff2] transition-colors"
+										>Support</button
 									>
-									<a href="#" class="text-[#111418] hover:text-[#0c7ff2] transition-colors">Docs</a>
+									<button class="text-[#111418] hover:text-[#0c7ff2] transition-colors">Docs</button>
 								</div>
 
 								<!-- Copyright -->

@@ -118,7 +118,10 @@
 	});
 </script>
 
-<div class="calendar-container flex flex-col h-full bg-gray-50">
+<div
+	class="calendar-container flex flex-col h-full min-h-screen bg-white"
+	style="font-family: 'Plus Jakarta Sans', 'Noto Sans', sans-serif;"
+>
 	<CalendarHeader
 		bind:currentView
 		bind:displayDate
@@ -127,12 +130,22 @@
 		on:openEventModal={handleOpenEventModal}
 	/>
 
-	<div class="calendar-body flex-grow overflow-auto p-4">
+	<div class="calendar-body flex-grow overflow-auto">
 		{#if isLoadingEvents}
-			<div class="text-center p-10">Loading events...</div>
+			<div class="text-center p-10 text-[#111418]">
+				<div
+					class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0c7ff2] mx-auto mb-4"
+				></div>
+				Loading events...
+			</div>
 		{/if}
 		{#if error}
-			<div class="text-center p-10 text-red-500">Error: {error}</div>
+			<div class="text-center p-10 text-red-500">
+				<div class="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
+					<p class="font-medium">Error loading events</p>
+					<p class="text-sm mt-1">{error}</p>
+				</div>
+			</div>
 		{/if}
 		{#if currentView === 'month'}
 			<MonthView

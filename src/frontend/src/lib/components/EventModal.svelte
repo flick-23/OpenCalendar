@@ -234,20 +234,36 @@
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
 		on:click={closeOnClickOutside}
+		on:keydown={(e) => {
+			if (e.key === 'Escape') {
+				uiStore.closeEventModal();
+			}
+		}}
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="event-modal-title"
 	>
 		<div
 			bind:this={modalElement}
 			class="w-full max-w-md mx-4 bg-white rounded-lg shadow-2xl transform transition-all duration-300 scale-100"
 			on:click|stopPropagation
+			on:keydown={(e) => {
+				if (e.key === 'Escape') {
+					uiStore.closeEventModal();
+				}
+			}}
+			role="document"
 		>
 			<div class="p-6">
 				<div class="flex items-center justify-between mb-6">
-					<h2 class="text-xl font-bold text-gray-800">
+					<h2 id="event-modal-title" class="text-xl font-bold text-gray-800">
 						{eventId ? 'Edit Event' : 'Create New Event'}
 					</h2>
 					<button
 						class="text-gray-400 hover:text-gray-600 transition-colors"
 						on:click={() => uiStore.closeEventModal()}
+						aria-label="Close modal"
+					>}
 					>
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
@@ -323,8 +339,8 @@
 					</div>
 
 					<!-- Color Selection -->
-					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-2"> Color </label>
+					<fieldset>
+						<legend class="block text-sm font-medium text-gray-700 mb-2">Color</legend>
 						<div class="flex flex-wrap gap-2">
 							{#each colors as color}
 								<button
@@ -336,10 +352,11 @@
 										: 'border-gray-200 hover:border-gray-400'}"
 									on:click={() => (selectedColor = color)}
 									title={color}
+									aria-label={`Select ${color} color`}
 								></button>
 							{/each}
 						</div>
-					</div>
+					</fieldset>
 
 					<!-- Submit Buttons -->
 					<div class="flex justify-between pt-4">

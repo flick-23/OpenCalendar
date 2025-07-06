@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import { logout } from '$lib/stores/authStore';
 	import {
 		Plus,
 		Search,
@@ -8,7 +9,8 @@
 		User,
 		ChevronLeft,
 		ChevronRight,
-		ChevronDown
+		ChevronDown,
+		LogOut
 	} from 'lucide-svelte';
 
 	export let currentView: 'month' | 'day' | 'year' = 'month';
@@ -41,6 +43,11 @@
 		dispatch('openEventModal');
 	}
 
+	const handleLogout = async () => {
+		await logout();
+		// The +layout.ts load function should handle redirecting to home
+	};
+
 	$: periodLabel = (() => {
 		if (currentView === 'month') {
 			return displayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -58,88 +65,93 @@
 	})();
 </script>
 
-<header class="px-4 py-2 flex items-center bg-white shadow sticky top-0 z-50">
+<header
+	class="px-4 sm:px-6 lg:px-8 py-4 flex items-center bg-white border-b border-[#f0f2f5] sticky top-0 z-50"
+>
 	<!-- Logo and App Name -->
-	<img src="/OpenCalendar.png" alt="OpenCalendar Logo" class="h-8 w-8 mr-2" />
-	<!-- Hide on very small screens -->
-	<h1 class="mr-10 text-xl text-gray-500 font-bold hidden sm:block">Calendar</h1>
+	<div class="flex items-center gap-3 text-[#111418] mr-8">
+		<img src="/OpenCalendar.png" alt="OpenCalendar Logo" class="h-8 w-8 flex-shrink-0" />
+		<h1 class="text-xl font-bold leading-tight tracking-[-0.015em] hidden sm:block">Calendar</h1>
+	</div>
 
 	<!-- Today Button -->
 	<button
-		class="border rounded py-2 px-4 mr-2 sm:mr-5 text-gray-600 hover:bg-gray-100 text-sm sm:text-base"
+		class="flex min-w-[70px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f0f2f5] text-[#111418] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#e8eaed] transition-colors mr-3"
 		on:click={() => navigate('today')}
 	>
 		Today
 	</button>
 
-	<!-- Month/Day/Year Navigation Arrows -->
-	<button
-		class="p-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-		aria-label="Previous period"
-		on:click={() => navigate('prev')}
-	>
-		<ChevronLeft size={20} />
-	</button>
-	<button
-		class="p-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-		aria-label="Next period"
-		on:click={() => navigate('next')}
-	>
-		<ChevronRight size={20} />
-	</button>
+	<!-- Navigation Arrows -->
+	<div class="flex items-center gap-2 mr-4">
+		<button
+			class="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full text-[#111418] hover:bg-[#f0f2f5] transition-colors"
+			aria-label="Previous period"
+			on:click={() => navigate('prev')}
+		>
+			<ChevronLeft size={20} />
+		</button>
+		<button
+			class="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full text-[#111418] hover:bg-[#f0f2f5] transition-colors"
+			aria-label="Next period"
+			on:click={() => navigate('next')}
+		>
+			<ChevronRight size={20} />
+		</button>
+	</div>
 
 	<!-- Current Period Display -->
 	<h2
-		class="ml-2 sm:ml-4 text-lg sm:text-xl text-gray-700 font-medium whitespace-nowrap overflow-hidden text-ellipsis"
-		style="min-width: 120px; max-width: 300px;"
+		class="text-[#111418] text-xl font-bold leading-tight tracking-[-0.015em] whitespace-nowrap overflow-hidden text-ellipsis"
+		style="min-width: 150px; max-width: 300px;"
 	>
 		{periodLabel}
 	</h2>
 
-	<!-- Create Event Button - Moved for better flow on smaller screens -->
+	<!-- Create Event Button -->
 	<button
 		title="Create new event"
-		class="ml-4 sm:ml-6 p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-md"
+		class="ml-6 flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-[#0c7ff2] text-white hover:bg-[#0a6fd1] transition-colors shadow-md"
 		on:click={openEventModal}
 	>
 		<Plus size={20} />
 	</button>
 
-	<!-- Right side elements (Search, Support, Settings, View Dropdown) -->
-	<div class="ml-auto flex items-center space-x-2">
+	<!-- Right side elements -->
+	<div class="ml-auto flex items-center gap-2">
 		<button
-			class="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+			class="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full text-[#111418] hover:bg-[#f0f2f5] transition-colors hidden md:flex"
 			title="Search"
 		>
-			<Search size={18} class="text-gray-600" />
+			<Search size={18} />
 		</button>
 		<button
-			class="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+			class="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full text-[#111418] hover:bg-[#f0f2f5] transition-colors hidden md:flex"
 			title="Help"
 		>
-			<HelpCircle size={18} class="text-gray-600" />
+			<HelpCircle size={18} />
 		</button>
 		<button
-			class="p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 hidden md:inline-flex"
+			class="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full text-[#111418] hover:bg-[#f0f2f5] transition-colors hidden md:flex"
 			title="Settings"
 		>
-			<Settings size={18} class="text-gray-600" />
+			<Settings size={18} />
 		</button>
 
 		<!-- View Dropdown -->
-		<div class="relative">
+		<div class="relative ml-2">
 			<select
 				bind:value={currentView}
 				on:change={setCurrentView}
 				aria-label="Calendar View"
-				class="appearance-none border border-gray-300 rounded-md py-2 pl-3 pr-10 text-sm bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+				class="appearance-none border border-[#f0f2f5] rounded-lg py-2 pl-3 pr-10 text-sm bg-white text-[#111418] hover:bg-[#f0f2f5] focus:outline-none focus:ring-2 focus:ring-[#0c7ff2] focus:border-[#0c7ff2] transition-colors"
 			>
 				{#each viewOptions as option (option.value)}
 					<option value={option.value}>{option.label}</option>
 				{/each}
 			</select>
 			<div
-				class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600"
+				class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#111418]"
 			>
 				<ChevronDown size={16} />
 			</div>
@@ -147,10 +159,19 @@
 
 		<!-- Profile/Account Icon -->
 		<button
-			class="ml-2 p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 hidden sm:inline-flex"
+			class="ml-2 flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full text-[#111418] hover:bg-[#f0f2f5] transition-colors hidden sm:flex"
 			title="Account"
 		>
-			<User size={18} class="text-gray-600" />
+			<User size={18} />
+		</button>
+
+		<!-- Logout Button -->
+		<button
+			class="ml-2 flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full text-[#111418] hover:bg-[#f0f2f5] transition-colors"
+			title="Logout"
+			on:click={handleLogout}
+		>
+			<LogOut size={18} />
 		</button>
 	</div>
 </header>
@@ -158,11 +179,6 @@
 <!-- Note: This component now uses Lucide Svelte icons for better consistency and visual appeal -->
 
 <style lang="postcss">
-	/* Custom styles for better icon alignment and spacing */
-	.lucide {
-		@apply flex-shrink-0;
-	}
-
 	/* Ensure select dropdown has proper styling */
 	select {
 		background-image: none;

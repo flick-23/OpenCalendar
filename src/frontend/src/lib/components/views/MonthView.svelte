@@ -123,23 +123,20 @@
 	});
 </script>
 
-<div class="month-view bg-white">
-	<div
-		class="days-of-week grid grid-cols-7 text-center text-sm text-gray-600 font-medium border-b border-gray-200"
-	>
-		<div>Sun</div>
-		<div>Mon</div>
-		<div>Tue</div>
-		<div>Wed</div>
-		<div>Thu</div>
-		<div>Fri</div>
-		<div>Sat</div>
+<div class="month-view bg-white min-h-[calc(100vh-80px)]">
+	<div class="days-of-week grid grid-cols-7 text-center bg-[#f0f2f5] border-b border-[#e8eaed]">
+		<div class="py-3 text-[#111418] text-sm font-medium leading-normal">Sun</div>
+		<div class="py-3 text-[#111418] text-sm font-medium leading-normal">Mon</div>
+		<div class="py-3 text-[#111418] text-sm font-medium leading-normal">Tue</div>
+		<div class="py-3 text-[#111418] text-sm font-medium leading-normal">Wed</div>
+		<div class="py-3 text-[#111418] text-sm font-medium leading-normal">Thu</div>
+		<div class="py-3 text-[#111418] text-sm font-medium leading-normal">Fri</div>
+		<div class="py-3 text-[#111418] text-sm font-medium leading-normal">Sat</div>
 	</div>
-	<div class="grid grid-cols-7 grid-rows-5 min-h-[calc(100vh-200px)]">
-		<!-- Adjust min-height as needed -->
+	<div class="grid grid-cols-7 min-h-[calc(100vh-140px)]">
 		{#each daysInGrid as dayItem (dayItem.date.toISOString())}
 			<div
-				class="day-cell border border-gray-200 p-2 flex flex-col relative hover:bg-gray-50"
+				class="day-cell border-r border-b border-[#f0f2f5] p-3 flex flex-col relative cursor-pointer hover:bg-[#f8f9fa] transition-colors"
 				class:not-current-month={!dayItem.isCurrentMonth}
 				class:today={dayItem.isToday && dayItem.isCurrentMonth}
 				on:click={() => handleDayClick(dayItem)}
@@ -154,10 +151,9 @@
 				aria-label={`Date ${dayItem.date.toLocaleDateString()}`}
 			>
 				<div
-					class="day-number text-xs sm:text-sm mb-1"
-					class:text-gray-900={dayItem.isCurrentMonth}
-					class:text-gray-400={!dayItem.isCurrentMonth}
-					class:font-bold={dayItem.isToday && dayItem.isCurrentMonth}
+					class="day-number text-sm font-medium leading-normal mb-2"
+					class:text-[#111418]={dayItem.isCurrentMonth}
+					class:text-[#9ca3af]={!dayItem.isCurrentMonth}
 				>
 					{dayItem.date.getDate()}
 				</div>
@@ -165,8 +161,8 @@
 					<div class="events-list space-y-1 overflow-y-auto flex-grow">
 						{#each getEventsForDay(dayItem.date) as event (event.id)}
 							<div
-								class="event-item text-xs p-1 rounded truncate text-white cursor-pointer hover:opacity-90"
-								style:background-color={event.color || '#3b82f6'}
+								class="event-item text-xs px-2 py-1 rounded-md text-white cursor-pointer hover:opacity-90 transition-opacity font-medium leading-normal"
+								style:background-color={event.color || '#0c7ff2'}
 								title={event.description ? `${event.title} - ${event.description}` : event.title}
 								on:click={(e) => handleEventClick(event, e)}
 								on:keydown={(e) => {
@@ -178,10 +174,9 @@
 								role="button"
 								tabindex="0"
 							>
-								{event.title}
+								<div class="truncate">{event.title}</div>
 							</div>
 						{/each}
-						<!-- More events indicator if needed -->
 					</div>
 				{/if}
 			</div>
@@ -191,15 +186,34 @@
 
 <style lang="postcss">
 	.day-cell {
-		min-height: 100px; /* Minimum height for each day cell */
+		min-height: 120px;
+		border-right: 1px solid #f0f2f5;
+		border-bottom: 1px solid #f0f2f5;
 	}
+
+	.day-cell:nth-child(7n) {
+		border-right: none;
+	}
+
 	.not-current-month {
-		@apply bg-gray-50;
+		@apply bg-[#f8f9fa] opacity-50;
 	}
+
 	.today .day-number {
-		@apply bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center;
+		@apply bg-[#0c7ff2] text-white rounded-full w-7 h-7 flex items-center justify-center font-bold;
 	}
+
+	.today {
+		@apply bg-[#f0f8ff] border-[#0c7ff2];
+	}
+
 	.event-item {
-		/* Ensure good contrast with text if background color is light */
+		background: linear-gradient(135deg, var(--event-color, #0c7ff2), var(--event-color, #0c7ff2));
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+
+	.event-item:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 	}
 </style>

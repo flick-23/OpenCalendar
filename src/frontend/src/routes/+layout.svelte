@@ -16,44 +16,22 @@
 	// This is mostly for structure. Specific nav bars, sidebars etc. would go here or be imported.
 </script>
 
-<div class="min-h-screen" class:bg-gray-100={$isLoggedIn}>
-	{#if $isLoggedIn}
-		<header class="bg-blue-600 text-white p-4 shadow-md">
-			<div class="container mx-auto flex justify-between items-center">
-				<a href="/" class="flex items-center text-xl font-bold">
-					<img src="/OpenCalendar.png" alt="OpenCalendar Logo" class="h-8 w-8 mr-2" />
-					OpenCalendar
-				</a>
-				<nav>
-					<!-- Navigation links can go here -->
-					<!-- e.g., <a href="/calendar" class="px-3">Calendar</a> -->
-					<button
-						on:click={handleLogout}
-						class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-					>
-						Logout
-					</button>
-				</nav>
-			</div>
-		</header>
-	{/if}
-
-	<main class={$isLoggedIn ? 'container mx-auto p-4' : ''}>
+<div
+	class="min-h-screen bg-white"
+	style="font-family: 'Plus Jakarta Sans', 'Noto Sans', sans-serif;"
+>
+	<main class="h-full">
 		{#if $navigating}
-			<div class="text-center p-8">
-				<p>Loading...</p>
-				<!-- Basic loading state -->
+			<div class="text-center p-8 text-[#111418]">
+				<div
+					class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0c7ff2] mx-auto mb-4"
+				></div>
+				<p class="font-medium">Loading...</p>
 			</div>
 		{:else}
 			<slot /> <!-- Page content will be injected here -->
 		{/if}
 	</main>
-
-	{#if $isLoggedIn}
-		<footer class="text-center p-4 mt-8 text-gray-600 text-sm">
-			OpenCalendar App &copy; {new Date().getFullYear()}
-		</footer>
-	{/if}
 </div>
 
 <style lang="postcss">

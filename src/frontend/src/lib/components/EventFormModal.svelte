@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { calendarStore, type Event } from '$lib/stores/calendarStore';
-	import { Calendar, Clock } from 'lucide-svelte';
+	import { X } from 'lucide-svelte';
 
 	export let targetDate: Date | null = null; // Date to pre-fill, typically from day click
 	export let eventToEdit: Event | null = null; // If editing an existing event
@@ -15,14 +15,15 @@
 	let startTime = '';
 	let endDate = '';
 	let endTime = '';
-	let color = '#3b82f6'; // Default event color (Tailwind blue-500)
+	let color = '#607afb'; // Default event color matching the new theme
 
 	let isLoading = false;
 	let errorMessage = '';
 
-	// Predefined color options
+	// Predefined color options matching the new design
 	const colorOptions = [
-		{ name: 'Blue', value: '#3b82f6' },
+		{ name: 'Primary', value: '#607afb' },
+		{ name: 'Blue', value: '#0c7ff2' },
 		{ name: 'Red', value: '#ef4444' },
 		{ name: 'Green', value: '#10b981' },
 		{ name: 'Yellow', value: '#f59e0b' },
@@ -30,8 +31,7 @@
 		{ name: 'Pink', value: '#ec4899' },
 		{ name: 'Indigo', value: '#6366f1' },
 		{ name: 'Teal', value: '#14b8a6' },
-		{ name: 'Orange', value: '#f97316' },
-		{ name: 'Gray', value: '#6b7280' }
+		{ name: 'Orange', value: '#f97316' }
 	];
 
 	// Helper to format Date to 'YYYY-MM-DD' for date input
@@ -126,6 +126,7 @@
 				// Create new event
 				await calendarStore.createEvent(eventData);
 			}
+			
 			dispatch('eventSaved');
 			closeModal();
 		} catch (error: any) {
@@ -179,171 +180,170 @@
 </script>
 
 <div
-	class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[1000]"
+	class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]"
 	on:click|self={closeModal}
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="event-modal-title"
 >
 	<div
-		class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+		class="bg-[#f8f9fc] rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+		style="font-family: 'Plus Jakarta Sans', 'Noto Sans', sans-serif;"
 		use:trapFocus
 	>
-		<h2 id="event-modal-title" class="text-xl font-semibold mb-4">
-			{eventToEdit ? 'Edit Event' : 'Add New Event'}
-		</h2>
+		<!-- Header -->
+		<div class="flex items-center justify-between border-b border-[#e6e9f4] px-6 py-4">
+			<h2 id="event-modal-title" class="text-[#0d0f1c] text-2xl font-bold leading-tight tracking-[-0.015em]">
+				{eventToEdit ? 'Edit Event' : 'New Event'}
+			</h2>
+			<button
+				type="button"
+				class="text-[#47569e] hover:text-[#0d0f1c] transition-colors"
+				on:click={closeModal}
+			>
+				<X size={24} />
+			</button>
+		</div>
 
-		{#if errorMessage}
-			<p class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-sm">
-				{errorMessage}
-			</p>
-		{/if}
-
-		<form on:submit|preventDefault={handleSubmit}>
-			<div class="mb-4">
-				<label for="event-title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-				<input
-					type="text"
-					id="event-title"
-					bind:value={title}
-					required
-					class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-				/>
-			</div>
-
-			<div class="grid grid-cols-1 gap-4 mb-4">
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<label for="event-start-date" class="block text-sm font-medium text-gray-700 mb-1"
-							>Start Date</label
-						>
-						<div class="relative">
-							<input
-								type="date"
-								id="event-start-date"
-								bind:value={startDate}
-								required
-								class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-							/>
-							<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-								<Calendar size={16} class="text-gray-400" />
-							</div>
-						</div>
-					</div>
-					<div>
-						<label for="event-start-time" class="block text-sm font-medium text-gray-700 mb-1"
-							>Start Time</label
-						>
-						<div class="relative">
-							<input
-								type="time"
-								id="event-start-time"
-								bind:value={startTime}
-								required
-								class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-							/>
-							<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-								<Clock size={16} class="text-gray-400" />
-							</div>
-						</div>
-					</div>
+		<!-- Form Content -->
+		<div class="px-6 py-4">
+			{#if errorMessage}
+				<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+					<p class="text-red-600 text-sm font-medium">{errorMessage}</p>
 				</div>
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<label for="event-end-date" class="block text-sm font-medium text-gray-700 mb-1"
-							>End Date</label
-						>
-						<div class="relative">
-							<input
-								type="date"
-								id="event-end-date"
-								bind:value={endDate}
-								required
-								class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-							/>
-							<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-								<Calendar size={16} class="text-gray-400" />
-							</div>
-						</div>
-					</div>
-					<div>
-						<label for="event-end-time" class="block text-sm font-medium text-gray-700 mb-1"
-							>End Time</label
-						>
-						<div class="relative">
-							<input
-								type="time"
-								id="event-end-time"
-								bind:value={endTime}
-								required
-								class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-							/>
-							<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-								<Clock size={16} class="text-gray-400" />
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
+			{/if}
 
-			<div class="mb-4">
-				<label for="event-description" class="block text-sm font-medium text-gray-700 mb-1"
-					>Description (Optional)</label
-				>
-				<textarea
-					id="event-description"
-					bind:value={description}
-					rows="3"
-					class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-				></textarea>
-			</div>
-
-			<div class="mb-6">
-				<label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
-				<div class="flex flex-wrap gap-2">
-					{#each colorOptions as colorOption}
-						<button
-							type="button"
-							class="w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-							class:border-gray-800={color === colorOption.value}
-							class:border-gray-300={color !== colorOption.value}
-							style:background-color={colorOption.value}
-							on:click={() => (color = colorOption.value)}
-							title={colorOption.name}
-						>
-							{#if color === colorOption.value}
-								<span class="text-white text-sm">✓</span>
-							{/if}
-						</button>
-					{/each}
-				</div>
-				<div class="mt-2">
-					<label for="custom-color" class="block text-xs text-gray-500 mb-1">Custom Color</label>
+			<form on:submit|preventDefault={handleSubmit}>
+				<!-- Title -->
+				<div class="mb-6">
+					<label for="event-title" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+						Title
+					</label>
 					<input
-						type="color"
-						id="custom-color"
-						bind:value={color}
-						class="w-16 h-8 rounded border border-gray-300 cursor-pointer"
+						type="text"
+						id="event-title"
+						bind:value={title}
+						required
+						placeholder="Add title"
+						class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d0f1c] focus:outline-0 focus:ring-0 border-none bg-[#e6e9f4] focus:border-none h-14 placeholder:text-[#47569e] p-4 text-base font-normal leading-normal"
 					/>
 				</div>
-			</div>
 
-			<div class="flex justify-end space-x-3">
-				<button
-					type="button"
-					on:click={closeModal}
-					class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-				>
-					Cancel
-				</button>
-				<button
-					type="submit"
-					disabled={isLoading}
-					class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-				>
-					{#if isLoading}Saving...{:else}{eventToEdit ? 'Save Changes' : 'Add Event'}{/if}
-				</button>
-			</div>
-		</form>
-	</div>
+				<!-- Description -->
+				<div class="mb-6">
+					<label for="event-description" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+						Description
+					</label>
+					<textarea
+						id="event-description"
+						bind:value={description}
+						placeholder="Add description"
+						rows="3"
+						class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d0f1c] focus:outline-0 focus:ring-0 border-none bg-[#e6e9f4] focus:border-none placeholder:text-[#47569e] p-4 text-base font-normal leading-normal"
+					></textarea>
+				</div>
+
+				<!-- Start and End Date -->
+				<div class="grid grid-cols-2 gap-4 mb-6">
+					<div>
+						<label for="event-start-date" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+							Start Date
+						</label>
+						<input
+							type="date"
+							id="event-start-date"
+							bind:value={startDate}
+							required
+							class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d0f1c] focus:outline-0 focus:ring-0 border-none bg-[#e6e9f4] focus:border-none h-14 placeholder:text-[#47569e] p-4 text-base font-normal leading-normal"
+						/>
+					</div>
+					<div>
+						<label for="event-end-date" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+							End Date
+						</label>
+						<input
+							type="date"
+							id="event-end-date"
+							bind:value={endDate}
+							required
+							class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d0f1c] focus:outline-0 focus:ring-0 border-none bg-[#e6e9f4] focus:border-none h-14 placeholder:text-[#47569e] p-4 text-base font-normal leading-normal"
+						/>
+					</div>
+				</div>
+
+				<!-- Start and End Time -->
+				<div class="grid grid-cols-2 gap-4 mb-6">
+					<div>
+						<label for="event-start-time" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+							Start Time
+						</label>
+						<input
+							type="time"
+							id="event-start-time"
+							bind:value={startTime}
+							required
+							class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d0f1c] focus:outline-0 focus:ring-0 border-none bg-[#e6e9f4] focus:border-none h-14 placeholder:text-[#47569e] p-4 text-base font-normal leading-normal"
+						/>
+					</div>
+					<div>
+						<label for="event-end-time" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+							End Time
+						</label>
+						<input
+							type="time"
+							id="event-end-time"
+							bind:value={endTime}
+							required
+							class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d0f1c] focus:outline-0 focus:ring-0 border-none bg-[#e6e9f4] focus:border-none h-14 placeholder:text-[#47569e] p-4 text-base font-normal leading-normal"
+						/>
+					</div>
+				</div>
+
+				<!-- Color Selection -->
+				<div class="mb-6">
+					<label class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+						Color
+					</label>
+					<div class="flex flex-wrap gap-3">
+						{#each colorOptions as colorOption}
+							<button
+								type="button"
+								class="w-10 h-10 rounded-full border-2 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#607afb] focus:ring-offset-2"
+								class:border-[#0d0f1c]={color === colorOption.value}
+								class:border-transparent={color !== colorOption.value}
+								style:background-color={colorOption.value}
+								on:click={() => (color = colorOption.value)}
+								title={colorOption.name}
+							>
+								{#if color === colorOption.value}
+									<span class="text-white text-sm font-bold">✓</span>
+								{/if}
+							</button>
+						{/each}
+					</div>
+				</div>
+
+				<!-- Action Buttons -->
+				<div class="flex justify-end gap-3 pt-4">
+					<button
+						type="button"
+						on:click={closeModal}
+						class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#e6e9f4] text-[#0d0f1c] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#d1d5db] transition-colors"
+					>
+						Cancel
+					</button>
+					<button
+						type="submit"
+						disabled={isLoading}
+						class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#607afb] text-[#f8f9fc] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#4f46e5] transition-colors disabled:opacity-50"
+					>
+						{#if isLoading}
+							Saving...
+						{:else}
+							{eventToEdit ? 'Save Changes' : 'Save'}
+						{/if}
+					</button>
+				</div>
+			</form>
+		</div>
 </div>
