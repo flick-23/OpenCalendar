@@ -16,7 +16,7 @@
 	// This is mostly for structure. Specific nav bars, sidebars etc. would go here or be imported.
 </script>
 
-<div class="min-h-screen bg-gray-100">
+<div class="min-h-screen" class:bg-gray-100={$isLoggedIn}>
 	{#if $isLoggedIn}
 		<header class="bg-blue-600 text-white p-4 shadow-md">
 			<div class="container mx-auto flex justify-between items-center">
@@ -38,7 +38,7 @@
 		</header>
 	{/if}
 
-	<main class="container mx-auto p-4">
+	<main class={$isLoggedIn ? 'container mx-auto p-4' : ''}>
 		{#if $navigating}
 			<div class="text-center p-8">
 				<p>Loading...</p>

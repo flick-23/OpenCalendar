@@ -10,11 +10,11 @@ export const load = async ({ url }) => {
     const loggedIn = get(isLoggedIn); // Get current login status
     const currentPath = url.pathname;
 
-    if (!loggedIn && currentPath !== '/login') {
-      // If not logged in and not already on the login page, redirect to /login
+    if (!loggedIn && currentPath !== '/login' && currentPath !== '/') {
+      // If not logged in and not on the login page or home page, redirect to home
       // Store the intended destination to redirect after login
-      const redirectTo = currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}` : '';
-      await goto(`/login${redirectTo}`, { replaceState: true });
+      const redirectTo = `?redirect=${encodeURIComponent(currentPath)}`;
+      await goto(`/${redirectTo}`, { replaceState: true });
     } else if (loggedIn && currentPath === '/login') {
       // If logged in and on the login page, redirect to home or intended destination
       const redirectParam = url.searchParams.get('redirect');

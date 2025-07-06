@@ -17,14 +17,10 @@
 	}
 
 	onMount(() => {
-		// Initial check if already logged in when component mounts
-		if ($isLoggedIn) {
-			console.log('User already logged in on mount, redirecting...');
-			isLoading = false; // Reset loading state
-			const redirectParam = $page.url.searchParams.get('redirect');
-			const destination = redirectParam ? decodeURIComponent(redirectParam) : '/';
-			goto(destination, { replaceState: true });
-		}
+		// Redirect to home page since login is now handled there
+		const redirectParam = $page.url.searchParams.get('redirect');
+		const destination = redirectParam ? `/?redirect=${encodeURIComponent(redirectParam)}` : '/';
+		goto(destination, { replaceState: true });
 	});
 
 	const handleLogin = async () => {
