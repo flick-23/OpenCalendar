@@ -8,228 +8,257 @@ import Nat "mo:base/Nat";
 import Int "mo:base/Int";
 import Hash "mo:base/Hash";
 import Debug "mo:base/Debug";
-import Types "../types";
+import Result "mo:base/Result";
+import Buffer "mo:base/Buffer";
+import Types "./types";
 
 actor CalendarCanister {
 
-    // Using proper hash functions for HashMap
-    private var calendars : HashMap.HashMap<Types.CalendarId, Types.Calendar> = HashMap.HashMap<Types.CalendarId, Types.Calendar>(0, Nat.equal, Hash.hash);
-    private var events : HashMap.HashMap<Types.EventId, Types.Event> = HashMap.HashMap<Types.EventId, Types.Event>(0, Nat.equal, Hash.hash);
+    // Import types from the types module
+    type Event = Types.Event;
+    type EventId = Types.EventId;
+    type Timestamp = Types.Timestamp;
+    type EventUpdate = Types.EventUpdate;
 
-    // Index: CalendarId -> Timestamp -> [EventId]
-    private var eventIndexByCalendar : HashMap.HashMap<Types.CalendarId, TrieMap.TrieMap<Types.Timestamp, [Types.EventId]>> = HashMap.HashMap<Types.CalendarId, TrieMap.TrieMap<Types.Timestamp, [Types.EventId]>>(0, Nat.equal, Hash.hash);
+    // === STATE VARIABLES ===
 
-    private stable var nextCalendarId : Types.CalendarId = 0;
-    private stable var nextEventId : Types.EventId = 0;
+    // Stable counter for generating unique event IDs
+    private stable var nextEventId : EventId = 1;
 
-    public shared (_msg) func create_calendar_internal(owner : Principal, name : Text, color : Text) : async Types.Calendar {
-        let id = nextCalendarId;
-        nextCalendarId += 1;
+    // Primary storage: HashMap for O(1) lookups by EventId
+    // This is our single source of truth for event data
+    private var events : HashMap.HashMap<EventId, Event> = HashMap.HashMap<EventId, Event>(0, Nat.equal, Hash.hash);
 
-        let newCalendar : Types.Calendar = {
-            id = id;
-            owner = owner;
-            name = name;
-            color = color;
+    // Performance index: TrieMap for efficient range queries by timestamp
+    // Maps start timestamp to array of event IDs starting at that time
+    // TrieMap maintains sorted order, enabling efficient range queries
+    private var eventsByStartTime : TrieMap.TrieMap<Timestamp, [EventId]> = TrieMap.TrieMap<Timestamp, [EventId]>(Int.equal, Int.hash);
+
+    // === HELPER FUNCTIONS ===
+
+    // Helper to add an event ID to the timestamp index
+    private func addToTimeIndex(eventId : EventId, timestamp : Timestamp) : () {
+        let existingIds = switch (eventsByStartTime.get(timestamp)) {
+            case (null) [];
+            case (?ids) ids;
         };
-        calendars.put(id, newCalendar);
-        eventIndexByCalendar.put(id, TrieMap.TrieMap<Types.Timestamp, [Types.EventId]>(Int.equal, Int.hash));
-
-        return newCalendar;
+        let newIds = Array.append(existingIds, [eventId]);
+        eventsByStartTime.put(timestamp, newIds);
     };
 
-    public shared query (_msg) func get_calendar_details(calendarId : Types.CalendarId) : async ?Types.Calendar {
-        // No authentication check here as UserRegistry is the one calling this,
-        // and it already knows the user owns this calendarId (implicitly).
-        // If users were to call this directly, we'd need an ownership/permission check.
-        return calendars.get(calendarId);
+    // Helper to remove an event ID from the timestamp index
+    private func removeFromTimeIndex(eventId : EventId, timestamp : Timestamp) : () {
+        switch (eventsByStartTime.get(timestamp)) {
+            case (null) {}; // Nothing to remove
+            case (?existingIds) {
+                let filteredIds = Array.filter<EventId>(existingIds, func(id) { id != eventId });
+                if (Array.size(filteredIds) == 0) {
+                    eventsByStartTime.delete(timestamp);
+                } else {
+                    eventsByStartTime.put(timestamp, filteredIds);
+                };
+            };
+        };
     };
 
-    public shared (msg) func create_event(calendarId : Types.CalendarId, title : Text, description : Text, startTime : Types.Timestamp, endTime : Types.Timestamp, color : Text) : async Types.Event {
-        let _caller = msg.caller;
+    // === CORE EVENT CRUD OPERATIONS ===
 
-        // Using Nutzer.get_or_crash for cleaner error handling
-        let _calendar = Nutzer.get_or_crash(calendars.get(calendarId), "Calendar not found with ID: " # Nat.toText(calendarId));
+    /**
+     * Creates a new event and stores it in both the primary storage and time index.
+     * The caller becomes the owner of the event.
+     *
+     * @param title - Event title
+     * @param description - Event description
+     * @param startTime - Start timestamp in nanoseconds
+     * @param endTime - End timestamp in nanoseconds
+     * @param color - Event color (hex code or color name)
+     * @returns Result with the created Event or error message
+     */
+    public shared (msg) func create_event(
+        title : Text,
+        description : Text,
+        startTime : Timestamp,
+        endTime : Timestamp,
+        color : Text,
+    ) : async Result.Result<Event, Text> {
 
+        // Validate input
         if (startTime >= endTime) {
-            throw Error.reject("Event start time must be before end time.");
+            return #err("Event start time must be before end time");
         };
 
-        let id = nextEventId;
+        let owner = msg.caller;
+        let eventId = nextEventId;
         nextEventId += 1;
 
-        let newEvent : Types.Event = {
-            id = id;
-            calendarId = calendarId;
+        // Create the new event
+        let newEvent : Event = {
+            id = eventId;
             title = title;
             description = description;
             startTime = startTime;
             endTime = endTime;
             color = color;
+            owner = owner;
         };
-        events.put(id, newEvent);
 
-        let calendarEventsIndex = Nutzer.get_or_crash(eventIndexByCalendar.get(calendarId), "Internal error: Event index for calendar not found.");
+        // Store in primary storage
+        events.put(eventId, newEvent);
 
-        let eventsAtStartTime = Nutzer.get_or_default(calendarEventsIndex.get(startTime), []);
-        // Warning about Array.append deprecation. Consider using a Buffer for better performance.
-        calendarEventsIndex.put(startTime, Array.append(eventsAtStartTime, [id]));
+        // Store in time index for efficient range queries
+        addToTimeIndex(eventId, startTime);
 
-        return newEvent;
+        #ok(newEvent);
     };
 
-    public shared (msg) func get_event(eventId : Types.EventId) : async ?Types.Event {
-        return events.get(eventId);
-    };
-
-    public shared (msg) func get_events_for_range(calendarId : Types.CalendarId, queryStartTime : Types.Timestamp, queryEndTime : Types.Timestamp) : async [Types.Event] {
-        if (calendars.get(calendarId) == null) {
-            throw Error.reject("Calendar not found with ID: " # Nat.toText(calendarId));
-        };
-        if (queryStartTime >= queryEndTime) {
-            if (queryStartTime > queryEndTime) {
-                throw Error.reject("Query start time cannot be after query end time.");
-            };
-        };
-
-        var resultingEvents : [Types.Event] = []; // Consider using a Buffer here
-        let calendarEventsIndexOpt = eventIndexByCalendar.get(calendarId);
-
-        let calendarEventsIndex = switch (calendarEventsIndexOpt) {
-            case (null) return [];
-            case (?index) index;
+    /**
+     * Retrieves all events within a given time range.
+     * This is a query function for optimal performance.
+     *
+     * @param start - Range start timestamp in nanoseconds
+     * @param end - Range end timestamp in nanoseconds
+     * @returns Array of events that overlap with the time range
+     */
+    public shared query func get_events_for_range(start : Timestamp, end : Timestamp) : async [Event] {
+        if (start >= end) {
+            return [];
         };
 
-        for ((eventStamp, eventIds) in calendarEventsIndex.entries()) {
-            if (eventStamp < queryEndTime) {
+        let resultBuffer = Buffer.Buffer<Event>(0);
+
+        // Iterate through the sorted time index to find relevant events
+        for ((timestamp, eventIds) in eventsByStartTime.entries()) {
+            // Only check timestamps that could contain relevant events
+            if (timestamp < end) {
                 for (eventId in eventIds.vals()) {
                     switch (events.get(eventId)) {
                         case (?event) {
-                            if (event.startTime < queryEndTime and event.endTime > queryStartTime) {
-                                // Warning about Array.append deprecation. Consider using a Buffer for better performance.
-                                resultingEvents := Array.append(resultingEvents, [event]);
+                            // Check if event overlaps with query range
+                            if (event.startTime < end and event.endTime > start) {
+                                resultBuffer.add(event);
                             };
                         };
-                        case (null) {};
-                    };
-                };
-            };
-        };
-
-        return resultingEvents;
-    };
-
-    public shared (msg) func update_event(
-        eventId : Types.EventId,
-        newTitle : ?Text,
-        newDescription : ?Text,
-        newStartTime : ?Types.Timestamp,
-        newEndTime : ?Types.Timestamp,
-        newColor : ?Text,
-    ) : async ?Types.Event {
-        // FIX: Replaced the misplaced throw with a call to Nutzer.get_or_crash
-        let currentEvent = Nutzer.get_or_crash(events.get(eventId), "Event not found for update with ID: " # Nat.toText(eventId));
-
-        let calendar = Nutzer.get_or_crash(calendars.get(currentEvent.calendarId), "Internal error: Calendar for event not found.");
-
-        let oldStartTime = currentEvent.startTime;
-
-        let finalStartTime = Option.get(newStartTime, currentEvent.startTime);
-        let finalEndTime = Option.get(newEndTime, currentEvent.endTime);
-
-        if (finalStartTime >= finalEndTime) {
-            throw Error.reject("Event start time must be before end time.");
-        };
-
-        let updatedEvent : Types.Event = {
-            id = eventId;
-            calendarId = currentEvent.calendarId;
-            title = Option.get(newTitle, currentEvent.title);
-            description = Option.get(newDescription, currentEvent.description);
-            startTime = finalStartTime;
-            endTime = finalEndTime;
-            color = Option.get(newColor, currentEvent.color);
-        };
-
-        events.put(eventId, updatedEvent);
-
-        switch (newStartTime) {
-            case (null) {};
-            case (?newStart) {
-                if (newStart != oldStartTime) {
-                    let calendarEventsIndex = Nutzer.get_or_crash(eventIndexByCalendar.get(currentEvent.calendarId), "Internal error: Event index for calendar not found.");
-
-                    let eventsAtOldStartTime = Nutzer.get_or_default(calendarEventsIndex.get(oldStartTime), []);
-                    var filteredOld : [Types.EventId] = []; // Consider using a Buffer here
-                    for (id_ in eventsAtOldStartTime.vals()) {
-                        if (id_ != eventId) {
-                            // Warning about Array.append deprecation. Consider using a Buffer for better performance
-                            filteredOld := Array.append(filteredOld, [id_]);
+                        case (null) {
+                            // Event ID exists in index but not in primary storage - data inconsistency
+                            // In production, we might want to clean this up
                         };
                     };
-
-                    if (Array.size(filteredOld) == 0) {
-                        calendarEventsIndex.delete(oldStartTime);
-                    } else {
-                        calendarEventsIndex.put(oldStartTime, filteredOld);
-                    };
-
-                    let eventsAtNewStartTime = Nutzer.get_or_default(calendarEventsIndex.get(updatedEvent.startTime), []);
-                    // Warning about Array.append deprecation. Consider using a Buffer for better performance.
-                    calendarEventsIndex.put(updatedEvent.startTime, Array.append(eventsAtNewStartTime, [eventId]));
                 };
             };
         };
 
-        return ?updatedEvent;
+        Buffer.toArray(resultBuffer);
     };
 
-    public shared (msg) func delete_event(eventId : Types.EventId) : async Bool {
-        let eventToDelete = switch (events.get(eventId)) {
-            case (null) return false;
+    /**
+     * Updates an existing event. Only the owner can update their events.
+     *
+     * @param eventId - ID of the event to update
+     * @param newTitle - Optional new title
+     * @param newDescription - Optional new description
+     * @param newStartTime - Optional new start time
+     * @param newEndTime - Optional new end time
+     * @param newColor - Optional new color
+     * @returns Result with updated Event or error message
+     */
+    public shared (msg) func update_event(
+        eventId : EventId,
+        newTitle : ?Text,
+        newDescription : ?Text,
+        newStartTime : ?Timestamp,
+        newEndTime : ?Timestamp,
+        newColor : ?Text,
+    ) : async Result.Result<Event, Text> {
+        let caller = msg.caller;
+
+        // Get the existing event
+        let existingEvent = switch (events.get(eventId)) {
+            case (null) return #err("Event not found");
             case (?event) event;
         };
 
-        let calendar = Nutzer.get_or_crash(calendars.get(eventToDelete.calendarId), "Internal error: Calendar for event not found.");
-
-        events.delete(eventId);
-
-        let calendarEventsIndex = Nutzer.get_or_crash(eventIndexByCalendar.get(eventToDelete.calendarId), "Internal error: Event index for calendar not found.");
-        let eventsAtStartTime = Nutzer.get_or_default(calendarEventsIndex.get(eventToDelete.startTime), []);
-
-        var filteredList : [Types.EventId] = []; // Consider using a Buffer here
-        for (id_ in eventsAtStartTime.vals()) {
-            if (id_ != eventId) {
-                // Warning about Array.append deprecation. Consider using a Buffer for better performance
-                filteredList := Array.append(filteredList, [id_]);
-            };
+        // Check ownership
+        if (existingEvent.owner != caller) {
+            return #err("Only the event owner can update this event");
         };
 
-        if (Array.size(filteredList) == 0) {
-            calendarEventsIndex.delete(eventToDelete.startTime);
-        } else {
-            calendarEventsIndex.put(eventToDelete.startTime, filteredList);
+        // Apply updates
+        let oldStartTime = existingEvent.startTime;
+        let finalStartTime = Option.get(newStartTime, existingEvent.startTime);
+        let finalEndTime = Option.get(newEndTime, existingEvent.endTime);
+
+        // Validate new times
+        if (finalStartTime >= finalEndTime) {
+            return #err("Event start time must be before end time");
         };
 
-        return true;
+        let updatedEvent : Event = {
+            id = existingEvent.id;
+            title = Option.get(newTitle, existingEvent.title);
+            description = Option.get(newDescription, existingEvent.description);
+            startTime = finalStartTime;
+            endTime = finalEndTime;
+            color = Option.get(newColor, existingEvent.color);
+            owner = existingEvent.owner;
+        };
+
+        // Update primary storage
+        events.put(eventId, updatedEvent);
+
+        // Update time index if start time changed
+        if (oldStartTime != finalStartTime) {
+            removeFromTimeIndex(eventId, oldStartTime);
+            addToTimeIndex(eventId, finalStartTime);
+        };
+
+        #ok(updatedEvent);
     };
 
-    module Nutzer {
-        public func get_or_default<X>(optVal : ?X, defaultVal : X) : X {
-            switch (optVal) {
-                case (null) defaultVal;
-                case (?x) x;
-            };
+    /**
+     * Deletes an event. Only the owner can delete their events.
+     *
+     * @param eventId - ID of the event to delete
+     * @returns Result with success boolean or error message
+     */
+    public shared (msg) func delete_event(eventId : EventId) : async Result.Result<Bool, Text> {
+        let caller = msg.caller;
+
+        // Get the event to delete
+        let eventToDelete = switch (events.get(eventId)) {
+            case (null) return #err("Event not found");
+            case (?event) event;
         };
 
-        public func get_or_crash<X>(optVal : ?X, message : Text) : X {
-            switch (optVal) {
-                case (null) {
-                    // In Motoko, we use Debug.trap() for fatal errors
-                    Debug.trap(message);
-                };
-                case (?x) x;
-            };
+        // Check ownership
+        if (eventToDelete.owner != caller) {
+            return #err("Only the event owner can delete this event");
+        };
+
+        // Remove from primary storage
+        events.delete(eventId);
+
+        // Remove from time index
+        removeFromTimeIndex(eventId, eventToDelete.startTime);
+
+        #ok(true);
+    };
+
+    /**
+     * Retrieves a single event by ID.
+     *
+     * @param eventId - ID of the event to retrieve
+     * @returns Optional Event
+     */
+    public shared query func get_event(eventId : EventId) : async ?Event {
+        events.get(eventId);
+    };
+
+    /**
+     * Returns system statistics for monitoring and debugging.
+     */
+    public shared query func get_stats() : async { totalEvents : Nat } {
+        {
+            totalEvents = events.size();
         };
     };
 };

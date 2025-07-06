@@ -16,6 +16,7 @@ export const idlFactory = ({ IDL }) => {
     'get_my_calendars' : IDL.Func([], [IDL.Vec(Calendar)], []),
     'get_my_profile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'register' : IDL.Func([IDL.Text], [UserProfile], []),
+    'set_calendar_canister_id' : IDL.Func([Principal], [], []),
   });
 };
 export const init = ({ IDL }) => { return []; };

@@ -1,5 +1,5 @@
 /**
- * Calendar Store - Frontend State Management for Calendar Events
+ * Events Store - Frontend State Management for Calendar Events
  * 
  * This store manages the client-side cache of event data and provides
  * functions to interact with the CalendarCanister backend.
@@ -8,17 +8,23 @@
  * This store is just a cache for efficient UI rendering.
  */
 
-import { writable, type Writable, get } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
 import { identity as authIdentity } from '$lib/stores/authStore';
-import { getCalendarCanisterActor } from '$lib/actors/actors';
+import { createActor } from '$lib/actors/actors';
 
-// Import types from generated declarations
+// Import IDL and types from generated declarations
+import {
+    idlFactory as calendarCanisterIdlFactory,
+    canisterId as calendarCanisterId
+} from '$declarations/calendar_canister_1';
 import type {
     _SERVICE as CalendarCanisterService,
-    Event as BackendEvent
+    Event as BackendEvent,
+    EventId as BackendEventId,
+    Timestamp as BackendTimestamp
 } from '$declarations/calendar_canister_1/calendar_canister_1.did';
 
-// Frontend Event type (simplified, matches backend Event structure)
+// Frontend Event type (simplified, no calendarId needed for new system)
 export interface Event {
   id: bigint;
   title: string;
@@ -29,19 +35,15 @@ export interface Event {
   owner: string; // Principal as string for easier handling
 }
 
-// Legacy types for backward compatibility during transition
-export type AppEvent = Event;
-export type AppId = bigint;
-
 // Store state interface
-interface CalendarState {
+interface EventsState {
   events: Event[];
   isLoading: boolean;
   error: string | null;
 }
 
 // Initial state
-const initialState: CalendarState = {
+const initialState: EventsState = {
   events: [],
   isLoading: false,
   error: null
@@ -62,18 +64,21 @@ function transformBackendEvent(backendEvent: BackendEvent): Event {
 
 // Helper to get calendar canister actor instance
 async function getCalendarActor(): Promise<CalendarCanisterService> {
-  const identity = get(authIdentity);
-  return getCalendarCanisterActor(identity);
+  const identity = authIdentity.get();
+  return createActor(calendarCanisterIdlFactory, {
+    canisterId: calendarCanisterId,
+    agentOptions: { identity }
+  }) as CalendarCanisterService;
 }
 
 // Create the store with methods
-export const calendarStore: Writable<CalendarState> & {
+export const eventsStore: Writable<EventsState> & {
   fetchEvents: (startTime: Date, endTime: Date) => Promise<void>;
   createEvent: (eventData: Omit<Event, 'id' | 'owner'>) => Promise<void>;
   updateEvent: (eventId: bigint, updates: Partial<Omit<Event, 'id' | 'owner'>>) => Promise<void>;
   deleteEvent: (eventId: bigint) => Promise<void>;
 } = (() => {
-  const store = writable<CalendarState>(initialState);
+  const store = writable<EventsState>(initialState);
 
   return {
     subscribe: store.subscribe,
@@ -82,10 +87,7 @@ export const calendarStore: Writable<CalendarState> & {
 
     /**
      * Fetches events for a given time range from the backend.
-     * Updates the store with the fetched events for the specific range.
-     * 
-     * @param startTime - Range start as Date object
-     * @param endTime - Range end as Date object
+     * Updates the store with the fetched events.
      */
     fetchEvents: async (startTime: Date, endTime: Date): Promise<void> => {
       store.update(s => ({ ...s, isLoading: true, error: null }));
@@ -113,21 +115,19 @@ export const calendarStore: Writable<CalendarState> & {
           isLoading: false
         }));
 
-      } catch (error: unknown) {
+      } catch (error: any) {
         console.error('Error fetching events:', error);
         store.update(s => ({
           ...s,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch events'
+          error: error.message || 'Failed to fetch events'
         }));
       }
     },
 
     /**
      * Creates a new event in the backend.
-     * After successful creation, refreshes the events list to ensure consistency.
-     * 
-     * @param eventData - Event data without id and owner (those are set by backend)
+     * Refreshes the events list to ensure consistency.
      */
     createEvent: async (eventData: Omit<Event, 'id' | 'owner'>): Promise<void> => {
       store.update(s => ({ ...s, isLoading: true, error: null }));
@@ -151,35 +151,44 @@ export const calendarStore: Writable<CalendarState> & {
         if ('ok' in result) {
           console.log('Event created successfully:', result.ok);
           
-          // Add the new event to the current cache immediately
-          const newEvent = transformBackendEvent(result.ok);
+          // Refresh events to get the latest state from the source of truth
+          // This is simple and reliable - we fetch events for the current month
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
           
+          // Re-fetch events (this will update isLoading state)
+          const startNano = BigInt(startOfMonth.getTime()) * 1000000n;
+          const endNano = BigInt(endOfMonth.getTime()) * 1000000n;
+          
+          const backendEvents = await actor.get_events_for_range(startNano, endNano);
+          const events = backendEvents
+            .map(transformBackendEvent)
+            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
           store.update(s => ({
             ...s,
-            events: [...s.events, newEvent].sort((a, b) => a.startTime.getTime() - b.startTime.getTime()),
+            events,
             isLoading: false
           }));
-          
+
         } else {
           throw new Error(result.err);
         }
 
-      } catch (error: unknown) {
+      } catch (error: any) {
         console.error('Error creating event:', error);
         store.update(s => ({
           ...s,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to create event'
+          error: error.message || 'Failed to create event'
         }));
       }
     },
 
     /**
      * Updates an existing event in the backend.
-     * After successful update, refreshes the events list to ensure consistency.
-     * 
-     * @param eventId - ID of the event to update
-     * @param updates - Partial event data to update
+     * Refreshes the events list to ensure consistency.
      */
     updateEvent: async (eventId: bigint, updates: Partial<Omit<Event, 'id' | 'owner'>>): Promise<void> => {
       store.update(s => ({ ...s, isLoading: true, error: null }));
@@ -188,51 +197,54 @@ export const calendarStore: Writable<CalendarState> & {
         console.log('Updating event:', eventId, updates);
 
         const actor = await getCalendarActor();
-        
-        // Convert Date objects to nanosecond timestamps if provided
-        const startNano = updates.startTime ? BigInt(updates.startTime.getTime()) * 1000000n : null;
-        const endNano = updates.endTime ? BigInt(updates.endTime.getTime()) * 1000000n : null;
-
         const result = await actor.update_event(
           eventId,
           updates.title ? [updates.title] : [],
           updates.description ? [updates.description] : [],
-          startNano ? [startNano] : [],
-          endNano ? [endNano] : [],
+          updates.startTime ? [BigInt(updates.startTime.getTime()) * 1000000n] : [],
+          updates.endTime ? [BigInt(updates.endTime.getTime()) * 1000000n] : [],
           updates.color ? [updates.color] : []
         );
 
         if ('ok' in result) {
           console.log('Event updated successfully:', result.ok);
           
-          // Update the event in the current cache
-          const updatedEvent = transformBackendEvent(result.ok);
+          // Refresh events to get the latest state
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
           
+          const startNano = BigInt(startOfMonth.getTime()) * 1000000n;
+          const endNano = BigInt(endOfMonth.getTime()) * 1000000n;
+          
+          const backendEvents = await actor.get_events_for_range(startNano, endNano);
+          const events = backendEvents
+            .map(transformBackendEvent)
+            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
           store.update(s => ({
             ...s,
-            events: s.events.map(e => e.id === eventId ? updatedEvent : e).sort((a, b) => a.startTime.getTime() - b.startTime.getTime()),
+            events,
             isLoading: false
           }));
-          
+
         } else {
           throw new Error(result.err);
         }
 
-      } catch (error: unknown) {
+      } catch (error: any) {
         console.error('Error updating event:', error);
         store.update(s => ({
           ...s,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to update event'
+          error: error.message || 'Failed to update event'
         }));
       }
     },
 
     /**
      * Deletes an event from the backend.
-     * After successful deletion, refreshes the events list to ensure consistency.
-     * 
-     * @param eventId - ID of the event to delete
+     * Refreshes the events list to ensure consistency.
      */
     deleteEvent: async (eventId: bigint): Promise<void> => {
       store.update(s => ({ ...s, isLoading: true, error: null }));
@@ -243,28 +255,42 @@ export const calendarStore: Writable<CalendarState> & {
         const actor = await getCalendarActor();
         const result = await actor.delete_event(eventId);
 
-        if ('ok' in result) {
+        if ('ok' in result && result.ok) {
           console.log('Event deleted successfully');
           
-          // Remove the event from the current cache
+          // Refresh events to get the latest state
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+          
+          const startNano = BigInt(startOfMonth.getTime()) * 1000000n;
+          const endNano = BigInt(endOfMonth.getTime()) * 1000000n;
+          
+          const backendEvents = await actor.get_events_for_range(startNano, endNano);
+          const events = backendEvents
+            .map(transformBackendEvent)
+            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
           store.update(s => ({
             ...s,
-            events: s.events.filter(e => e.id !== eventId),
+            events,
             isLoading: false
           }));
-          
+
         } else {
-          throw new Error(result.err);
+          throw new Error('err' in result ? result.err : 'Failed to delete event');
         }
 
-      } catch (error: unknown) {
+      } catch (error: any) {
         console.error('Error deleting event:', error);
         store.update(s => ({
           ...s,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to delete event'
+          error: error.message || 'Failed to delete event'
         }));
       }
     }
   };
 })();
+
+console.log('Events store initialized with new architecture');

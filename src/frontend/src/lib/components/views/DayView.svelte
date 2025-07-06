@@ -1,15 +1,16 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import type { AppEvent } from '$lib/stores/calendarStore';
+	import { uiStore } from '$lib/stores/uiStore';
+	import type { Event } from '$lib/stores/calendarStore';
 
 	export let displayDate: Date = new Date(); // The day to display
-	export let events: AppEvent[] = []; // Events for the current display period
+	export let events: Event[] = []; // Events for the current display period
 
 	const dispatch = createEventDispatcher();
 
 	let currentDayFormatted: string;
-	let timeSlots: { hour: number; timeLabel: string; events: AppEvent[] }[] = [];
-	let allDayEvents: AppEvent[] = [];
+	let timeSlots: { hour: number; timeLabel: string; events: Event[] }[] = [];
+	let allDayEvents: Event[] = [];
 
 	function updateDayView() {
 		currentDayFormatted = displayDate.toLocaleDateString('default', {
@@ -64,8 +65,22 @@
 		dispatch('openEventModalForDate', clickedDate);
 	}
 
-	function handleEventClick(event: AppEvent) {
-		dispatch('eventClick', event);
+	function handleEventClick(event: Event) {
+		// Dispatch event to parent Calendar component to handle editing
+		// Create a custom event that includes both the event data and the action
+		const customEvent = new CustomEvent('editEvent', {
+			detail: event
+		});
+		// For now, we'll use the uiStore approach, but this should be refactored
+		// to dispatch to the parent Calendar component
+		uiStore.openEventModal({
+			id: event.id,
+			title: event.title,
+			description: event.description,
+			startTime: event.startTime,
+			endTime: event.endTime,
+			color: event.color
+		});
 	}
 
 	function getCurrentTimePosition(): number {
@@ -116,7 +131,10 @@
 						role="button"
 						tabindex="0"
 					>
-						{event.title}
+						<div class="font-medium">{event.title}</div>
+						{#if event.description}
+							<div class="text-xs opacity-90 mt-1">{event.description}</div>
+						{/if}
 					</div>
 				{/each}
 			</div>

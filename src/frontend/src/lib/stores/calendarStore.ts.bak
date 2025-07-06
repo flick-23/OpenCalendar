@@ -76,6 +76,7 @@ export const calendarStore: Writable<CalendarState> & {
   const store = writable<CalendarState>(initialState);
 
   return {
+  return {
     subscribe: store.subscribe,
     set: store.set,
     update: store.update,

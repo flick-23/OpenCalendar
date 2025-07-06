@@ -2,40 +2,31 @@ import type { Principal } from '@dfinity/principal';
 import type { ActorMethod } from '@dfinity/agent';
 import type { IDL } from '@dfinity/candid';
 
-export interface Calendar {
-  'id' : CalendarId,
-  'owner' : Principal,
-  'name' : string,
-  'color' : string,
-}
-export type CalendarId = bigint;
 export interface Event {
   'id' : EventId,
   'startTime' : Timestamp,
   'title' : string,
   'endTime' : Timestamp,
+  'owner' : Principal,
   'color' : string,
   'description' : string,
-  'calendarId' : CalendarId,
 }
 export type EventId = bigint;
 export type Principal = Principal;
+export type Result = { 'ok' : Event } |
+  { 'err' : string };
+export type Result_1 = { 'ok' : boolean } |
+  { 'err' : string };
 export type Timestamp = bigint;
 export interface _SERVICE {
-  'create_calendar_internal' : ActorMethod<
-    [Principal, string, string],
-    Calendar
-  >,
   'create_event' : ActorMethod<
-    [CalendarId, string, string, Timestamp, Timestamp, string],
-    Event
+    [string, string, Timestamp, Timestamp, string],
+    Result
   >,
-  'delete_event' : ActorMethod<[EventId], boolean>,
+  'delete_event' : ActorMethod<[EventId], Result_1>,
   'get_event' : ActorMethod<[EventId], [] | [Event]>,
-  'get_events_for_range' : ActorMethod<
-    [CalendarId, Timestamp, Timestamp],
-    Array<Event>
-  >,
+  'get_events_for_range' : ActorMethod<[Timestamp, Timestamp], Array<Event>>,
+  'get_stats' : ActorMethod<[], { 'totalEvents' : bigint }>,
   'update_event' : ActorMethod<
     [
       EventId,
@@ -45,7 +36,7 @@ export interface _SERVICE {
       [] | [Timestamp],
       [] | [string],
     ],
-    [] | [Event]
+    Result
   >,
 }
 export declare const idlFactory: IDL.InterfaceFactory;

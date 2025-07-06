@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { onMount, createEventDispatcher } from 'svelte';
-	import { calendarStore, type AppEvent } from '$lib/stores/calendarStore'; // Assuming AppEvent is exported
-	import type { AppId } from '$lib/stores/calendarStore'; // Assuming AppId is exported
+	import { uiStore } from '$lib/stores/uiStore';
+	import { calendarStore, type Event } from '$lib/stores/calendarStore';
 
 	export let displayDate: Date = new Date(); // The month to display
-	export let events: AppEvent[] = []; // Events for the current display period
-	export let selectedCalendarId: AppId | null = null;
+	export let events: Event[] = []; // Events for the current display period
 
 	const dispatch = createEventDispatcher();
 
@@ -32,7 +31,11 @@
 		const prevMonthLastDay = new Date(year, month, 0);
 		const prevMonthDaysToShow = startDayOfWeek;
 		for (let i = 0; i < prevMonthDaysToShow; i++) {
-			const d = new Date(prevMonthLastDay.getFullYear(), prevMonthLastDay.getMonth(), prevMonthLastDay.getDate() - i);
+			const d = new Date(
+				prevMonthLastDay.getFullYear(),
+				prevMonthLastDay.getMonth(),
+				prevMonthLastDay.getDate() - i
+			);
 			tempDaysInGrid.unshift({
 				date: d,
 				isCurrentMonth: false,
@@ -46,16 +49,19 @@
 			tempDaysInGrid.push({
 				date: d,
 				isCurrentMonth: true,
-				isToday: d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()
+				isToday:
+					d.getDate() === today.getDate() &&
+					d.getMonth() === today.getMonth() &&
+					d.getFullYear() === today.getFullYear()
 			});
 		}
 
 		// Add days from next month
 		const totalDaysShown = tempDaysInGrid.length;
 		// Ensure grid fills up to a multiple of 7, typically 35 or 42 cells
-		const cellsInGrid = Math.ceil(totalDaysShown / 7) * 7 < 35 ? 35 : Math.ceil(totalDaysShown / 7) * 7;
+		const cellsInGrid =
+			Math.ceil(totalDaysShown / 7) * 7 < 35 ? 35 : Math.ceil(totalDaysShown / 7) * 7;
 		const nextMonthDaysToShow = cellsInGrid - totalDaysShown;
-
 
 		for (let i = 1; i <= nextMonthDaysToShow; i++) {
 			const d = new Date(year, month + 1, i);
@@ -69,13 +75,17 @@
 	}
 
 	// Function to get events for a specific day from the passed 'events' prop
-	function getEventsForDay(date: Date): AppEvent[] {
-		return events.filter(event => {
-			const eventStartDate = new Date(event.startTime); // Assuming startTime is a Date object or parsable
-			return eventStartDate.getFullYear() === date.getFullYear() &&
-				   eventStartDate.getMonth() === date.getMonth() &&
-				   eventStartDate.getDate() === date.getDate();
-		}).slice(0, 3); // Show max 3 events per day in month view, for example
+	function getEventsForDay(date: Date): Event[] {
+		return events
+			.filter((event) => {
+				const eventStartDate = new Date(event.startTime); // Assuming startTime is a Date object or parsable
+				return (
+					eventStartDate.getFullYear() === date.getFullYear() &&
+					eventStartDate.getMonth() === date.getMonth() &&
+					eventStartDate.getDate() === date.getDate()
+				);
+			})
+			.slice(0, 3); // Show max 3 events per day in month view, for example
 	}
 
 	function handleDayClick(dayItem: { date: Date; isCurrentMonth: boolean; isToday: boolean }) {
@@ -87,6 +97,22 @@
 		}
 	}
 
+	function handleEventClick(event: Event, domEvent: MouseEvent) {
+		// Prevent the day click from triggering
+		domEvent.stopPropagation();
+
+		// Open the event modal for editing - using uiStore still for now
+		// This should be refactored to dispatch to parent Calendar component
+		const eventData = {
+			id: event.id,
+			title: event.title,
+			description: event.description,
+			startTime: event.startTime,
+			endTime: event.endTime,
+			color: event.color
+		};
+		uiStore.openEventModal(eventData);
+	}
 
 	$: if (displayDate) {
 		updateCalendarGrid();
@@ -95,11 +121,12 @@
 	onMount(() => {
 		updateCalendarGrid();
 	});
-
 </script>
 
 <div class="month-view bg-white">
-	<div class="days-of-week grid grid-cols-7 text-center text-sm text-gray-600 font-medium border-b border-gray-200">
+	<div
+		class="days-of-week grid grid-cols-7 text-center text-sm text-gray-600 font-medium border-b border-gray-200"
+	>
 		<div>Sun</div>
 		<div>Mon</div>
 		<div>Tue</div>
@@ -108,7 +135,8 @@
 		<div>Fri</div>
 		<div>Sat</div>
 	</div>
-	<div class="grid grid-cols-7 grid-rows-5 min-h-[calc(100vh-200px)]"><!-- Adjust min-height as needed -->
+	<div class="grid grid-cols-7 grid-rows-5 min-h-[calc(100vh-200px)]">
+		<!-- Adjust min-height as needed -->
 		{#each daysInGrid as dayItem (dayItem.date.toISOString())}
 			<div
 				class="day-cell border border-gray-200 p-2 flex flex-col relative hover:bg-gray-50"
@@ -137,9 +165,18 @@
 					<div class="events-list space-y-1 overflow-y-auto flex-grow">
 						{#each getEventsForDay(dayItem.date) as event (event.id)}
 							<div
-								class="event-item text-xs p-1 rounded truncate text-white"
+								class="event-item text-xs p-1 rounded truncate text-white cursor-pointer hover:opacity-90"
 								style:background-color={event.color || '#3b82f6'}
-								title={event.title}
+								title={event.description ? `${event.title} - ${event.description}` : event.title}
+								on:click={(e) => handleEventClick(event, e)}
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										handleEventClick(event, e);
+									}
+								}}
+								role="button"
+								tabindex="0"
 							>
 								{event.title}
 							</div>

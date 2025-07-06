@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { calendarStore, type AppEvent } from '$lib/stores/calendarStore';
-	import type { AppId } from '$lib/stores/calendarStore';
+	import { calendarStore, type Event } from '$lib/stores/calendarStore';
 	import CalendarHeader from '$lib/components/CalendarHeader.svelte';
 	import MonthView from '$lib/components/views/MonthView.svelte';
 	import DayView from '$lib/components/views/DayView.svelte';
@@ -16,22 +15,20 @@
 	let showEventModal = false;
 	let eventModalDate: Date | null = null; // For pre-filling date in modal
 
-	// Subscribe to relevant parts of calendarStore
-	let storeState: import('svelte/store').Readable<ReturnType<typeof calendarStore.subscribe>>;
-	let currentEvents: AppEvent[] = [];
-	let currentSelectedCalendarId: AppId | null = null;
+	// Subscribe to the new simplified calendarStore
+	let currentEvents: Event[] = [];
 	let isLoadingEvents = false;
+	let error: string | null = null;
 
 	const unsubscribe = calendarStore.subscribe((value) => {
-		// $: console.log("Calendar.svelte store update:", value);
 		currentEvents = value.events;
-		currentSelectedCalendarId = value.selectedCalendarId;
-		isLoadingEvents = value.isLoadingEvents;
+		isLoadingEvents = value.isLoading;
+		error = value.error;
 	});
 
 	function handleSetView(event: CustomEvent<CalendarView>) {
 		currentView = event.detail;
-		// Fetch events for the new view, displayDate might need adjustment
+		// Fetch events for the new view
 		fetchEventsForCurrentPeriod();
 	}
 
@@ -51,7 +48,10 @@
 				newDate.setFullYear(newDate.getFullYear() + increment);
 			}
 		}
-		displayDate = newDate; // This will trigger the reactive block below
+		displayDate = newDate;
+
+		// Fetch events for the new date
+		fetchEventsForCurrentPeriod();
 	}
 
 	function handleOpenEventModal(event?: CustomEvent<Date>) {
@@ -65,29 +65,18 @@
 		fetchEventsForCurrentPeriod();
 	}
 
-	function handleEventClick(event: CustomEvent<AppEvent>) {
-		// Handle event click - could open edit modal or show details
-		console.log('Event clicked:', event.detail);
-	}
-
 	function handleCloseEventModal() {
 		showEventModal = false;
 		eventModalDate = null;
 	}
 
 	async function fetchEventsForCurrentPeriod() {
-		if (!currentSelectedCalendarId) {
-			// console.log('No calendar selected, skipping event fetch.');
-			calendarStore.update((s) => ({ ...s, events: [] })); // Clear events
-			return;
-		}
-
 		let startDate: Date;
 		let endDate: Date;
 
 		if (currentView === 'month') {
 			startDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), 1);
-			endDate = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0, 23, 59, 59, 999); // End of the month
+			endDate = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0, 23, 59, 59, 999);
 		} else if (currentView === 'day') {
 			startDate = new Date(
 				displayDate.getFullYear(),
@@ -102,30 +91,24 @@
 				59,
 				59,
 				999
-			); // End of the day
+			);
 		} else if (currentView === 'year') {
-			startDate = new Date(displayDate.getFullYear(), 0, 1); // Start of the year
-			endDate = new Date(displayDate.getFullYear(), 11, 31, 23, 59, 59, 999); // End of the year
+			startDate = new Date(displayDate.getFullYear(), 0, 1);
+			endDate = new Date(displayDate.getFullYear(), 11, 31, 23, 59, 59, 999);
 		} else {
 			console.error('Unknown view for fetching events:', currentView);
 			return;
 		}
 
-		// console.log(`Fetching events for ${currentView} view, calendar ${currentSelectedCalendarId}, range ${startDate.toISOString()} - ${endDate.toISOString()}`);
-		await calendarStore.fetchEvents(currentSelectedCalendarId, startDate, endDate);
-	}
-
-	// Reactive statement to fetch events when displayDate, currentView, or selectedCalendarId changes
-	$: if (displayDate || currentView || currentSelectedCalendarId) {
-		// console.log("Reactive trigger: displayDate, currentView, or selectedCalendarId changed. Refetching events.");
-		fetchEventsForCurrentPeriod();
+		console.log(
+			`Fetching events for ${currentView} view, range ${startDate.toISOString()} - ${endDate.toISOString()}`
+		);
+		await calendarStore.fetchEvents(startDate, endDate);
 	}
 
 	onMount(() => {
-		// Initial fetch if a calendar is already selected (e.g. from previous session via store hydration)
-		if (currentSelectedCalendarId) {
-			fetchEventsForCurrentPeriod();
-		}
+		// Initial fetch on mount
+		fetchEventsForCurrentPeriod();
 	});
 
 	onDestroy(() => {
@@ -148,11 +131,13 @@
 		{#if isLoadingEvents}
 			<div class="text-center p-10">Loading events...</div>
 		{/if}
+		{#if error}
+			<div class="text-center p-10 text-red-500">Error: {error}</div>
+		{/if}
 		{#if currentView === 'month'}
 			<MonthView
 				bind:displayDate
 				events={currentEvents}
-				selectedCalendarId={currentSelectedCalendarId}
 				on:openEventModalForDate={handleOpenEventModal}
 			/>
 		{:else if currentView === 'day'}
@@ -160,7 +145,6 @@
 				bind:displayDate
 				events={currentEvents}
 				on:openEventModalForDate={handleOpenEventModal}
-				on:eventClick={handleEventClick}
 			/>
 		{:else if currentView === 'year'}
 			<YearView
@@ -172,15 +156,11 @@
 		{/if}
 	</div>
 
-	{#if showEventModal && currentSelectedCalendarId}
+	{#if showEventModal}
 		<EventFormModal
 			targetDate={eventModalDate}
-			calendarId={currentSelectedCalendarId}
 			on:close={handleCloseEventModal}
-			on:eventSaved={() => {
-				fetchEventsForCurrentPeriod(); // Re-fetch events after saving
-				handleCloseEventModal();
-			}}
+			on:eventSaved={handleCloseEventModal}
 		/>
 	{/if}
 </div>

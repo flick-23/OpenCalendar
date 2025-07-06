@@ -16,6 +16,7 @@ export interface _SERVICE {
   'get_my_calendars' : ActorMethod<[], Array<Calendar>>,
   'get_my_profile' : ActorMethod<[], [] | [UserProfile]>,
   'register' : ActorMethod<[string], UserProfile>,
+  'set_calendar_canister_id' : ActorMethod<[Principal], undefined>,
 }
 export declare const idlFactory: IDL.InterfaceFactory;
 export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];

@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { calendarStore, type AppEvent, type AppId } from '$lib/stores/calendarStore';
+	import { calendarStore, type Event } from '$lib/stores/calendarStore';
 	import { Calendar, Clock } from 'lucide-svelte';
 
 	export let targetDate: Date | null = null; // Date to pre-fill, typically from day click
-	export let eventToEdit: AppEvent | null = null; // If editing an existing event
-	export let calendarId: AppId; // The calendar ID to which this event belongs
+	export let eventToEdit: Event | null = null; // If editing an existing event
 
 	const dispatch = createEventDispatcher();
 
@@ -113,7 +112,6 @@
 
 		try {
 			const eventData = {
-				calendarId, // Passed as prop
 				title,
 				description,
 				startTime: startDateTime,
@@ -123,9 +121,7 @@
 
 			if (eventToEdit && eventToEdit.id) {
 				// Update existing event
-				// Omit calendarId for update, as it's part of the eventId's context or not changed
-				const { calendarId: _, ...updateData } = eventData;
-				await calendarStore.updateEvent(eventToEdit.id, updateData);
+				await calendarStore.updateEvent(eventToEdit.id, eventData);
 			} else {
 				// Create new event
 				await calendarStore.createEvent(eventData);

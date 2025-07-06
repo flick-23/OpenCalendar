@@ -17,4 +17,5 @@ service : {
   get_my_calendars: () -> (vec Calendar);
   get_my_profile: () -> (opt UserProfile) query;
   register: (name: text) -> (UserProfile);
+  set_calendar_canister_id: (id: Principal) -> ();
 }

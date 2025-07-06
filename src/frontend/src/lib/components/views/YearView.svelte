@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import type { AppEvent } from '$lib/stores/calendarStore';
+	import type { Event } from '$lib/stores/calendarStore';
 
 	export let displayDate: Date = new Date(); // The year to display
-	export let events: AppEvent[] = []; // Events for the current display period
+	export let events: Event[] = []; // Events for the current display period
 
 	const dispatch = createEventDispatcher();
 

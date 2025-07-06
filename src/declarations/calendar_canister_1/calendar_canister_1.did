@@ -1,34 +1,68 @@
 type Timestamp = int;
+type Result_1 = 
+ variant {
+   err: text;
+   ok: bool;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok: Event;
+ };
 type Principal = principal;
 type EventId = nat;
 type Event = 
  record {
-   calendarId: CalendarId;
    color: text;
    description: text;
    endTime: Timestamp;
    id: EventId;
+   owner: Principal;
    startTime: Timestamp;
    title: text;
  };
-type CalendarId = nat;
-type Calendar = 
- record {
-   color: text;
-   id: CalendarId;
-   name: text;
-   owner: Principal;
- };
 service : {
-  create_calendar_internal: (owner: principal, name: text, color: text) ->
-   (Calendar);
-  create_event: (calendarId: CalendarId, title: text, description: text,
-   startTime: Timestamp, endTime: Timestamp, color: text) -> (Event);
-  delete_event: (eventId: EventId) -> (bool);
-  get_event: (eventId: EventId) -> (opt Event);
-  get_events_for_range: (calendarId: CalendarId, queryStartTime: Timestamp,
-   queryEndTime: Timestamp) -> (vec Event);
+  /// * Creates a new event and stores it in both the primary storage and time index.
+  ///      * The caller becomes the owner of the event.
+  ///      * 
+  ///      * @param title - Event title
+  ///      * @param description - Event description  
+  ///      * @param startTime - Start timestamp in nanoseconds
+  ///      * @param endTime - End timestamp in nanoseconds
+  ///      * @param color - Event color (hex code or color name)
+  ///      * @returns Result with the created Event or error message
+  create_event: (title: text, description: text, startTime: Timestamp,
+   endTime: Timestamp, color: text) -> (Result);
+  /// * Deletes an event. Only the owner can delete their events.
+  ///      * 
+  ///      * @param eventId - ID of the event to delete
+  ///      * @returns Result with success boolean or error message
+  delete_event: (eventId: EventId) -> (Result_1);
+  /// * Retrieves a single event by ID.
+  ///      * 
+  ///      * @param eventId - ID of the event to retrieve
+  ///      * @returns Optional Event
+  get_event: (eventId: EventId) -> (opt Event) query;
+  /// * Retrieves all events within a given time range.
+  ///      * This is a query function for optimal performance.
+  ///      * 
+  ///      * @param start - Range start timestamp in nanoseconds
+  ///      * @param end - Range end timestamp in nanoseconds  
+  ///      * @returns Array of events that overlap with the time range
+  get_events_for_range: (start: Timestamp, end: Timestamp) ->
+   (vec Event) query;
+  /// * Returns system statistics for monitoring and debugging.
+  get_stats: () -> (record {totalEvents: nat;}) query;
+  /// * Updates an existing event. Only the owner can update their events.
+  ///      * 
+  ///      * @param eventId - ID of the event to update
+  ///      * @param newTitle - Optional new title
+  ///      * @param newDescription - Optional new description
+  ///      * @param newStartTime - Optional new start time
+  ///      * @param newEndTime - Optional new end time
+  ///      * @param newColor - Optional new color
+  ///      * @returns Result with updated Event or error message
   update_event: (eventId: EventId, newTitle: opt text, newDescription:
    opt text, newStartTime: opt Timestamp, newEndTime: opt Timestamp,
-   newColor: opt text) -> (opt Event);
+   newColor: opt text) -> (Result);
 }
