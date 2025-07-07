@@ -120,13 +120,15 @@
 			};
 
 			if (eventToEdit && eventToEdit.id) {
-				// Update existing event
-				await calendarStore.updateEvent(eventToEdit.id, eventData);
+				// Update existing event - ensure id is bigint
+				const idToUpdate =
+					typeof eventToEdit.id === 'string' ? BigInt(eventToEdit.id) : eventToEdit.id;
+				await calendarStore.updateEvent(idToUpdate, eventData);
 			} else {
 				// Create new event
 				await calendarStore.createEvent(eventData);
 			}
-			
+
 			dispatch('eventSaved');
 			closeModal();
 		} catch (error: any) {
@@ -182,7 +184,11 @@
 <div
 	class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]"
 	on:click|self={closeModal}
+	on:keydown={(e) => {
+		if (e.key === 'Escape') closeModal();
+	}}
 	role="dialog"
+	tabindex="0"
 	aria-modal="true"
 	aria-labelledby="event-modal-title"
 >
@@ -193,7 +199,10 @@
 	>
 		<!-- Header -->
 		<div class="flex items-center justify-between border-b border-[#e6e9f4] px-6 py-4">
-			<h2 id="event-modal-title" class="text-[#0d0f1c] text-2xl font-bold leading-tight tracking-[-0.015em]">
+			<h2
+				id="event-modal-title"
+				class="text-[#0d0f1c] text-2xl font-bold leading-tight tracking-[-0.015em]"
+			>
 				{eventToEdit ? 'Edit Event' : 'New Event'}
 			</h2>
 			<button
@@ -216,7 +225,10 @@
 			<form on:submit|preventDefault={handleSubmit}>
 				<!-- Title -->
 				<div class="mb-6">
-					<label for="event-title" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+					<label
+						for="event-title"
+						class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2"
+					>
 						Title
 					</label>
 					<input
@@ -231,7 +243,10 @@
 
 				<!-- Description -->
 				<div class="mb-6">
-					<label for="event-description" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+					<label
+						for="event-description"
+						class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2"
+					>
 						Description
 					</label>
 					<textarea
@@ -246,7 +261,10 @@
 				<!-- Start and End Date -->
 				<div class="grid grid-cols-2 gap-4 mb-6">
 					<div>
-						<label for="event-start-date" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+						<label
+							for="event-start-date"
+							class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2"
+						>
 							Start Date
 						</label>
 						<input
@@ -258,7 +276,10 @@
 						/>
 					</div>
 					<div>
-						<label for="event-end-date" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+						<label
+							for="event-end-date"
+							class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2"
+						>
 							End Date
 						</label>
 						<input
@@ -270,11 +291,13 @@
 						/>
 					</div>
 				</div>
-
 				<!-- Start and End Time -->
 				<div class="grid grid-cols-2 gap-4 mb-6">
 					<div>
-						<label for="event-start-time" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+						<label
+							for="event-start-time"
+							class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2"
+						>
 							Start Time
 						</label>
 						<input
@@ -286,7 +309,10 @@
 						/>
 					</div>
 					<div>
-						<label for="event-end-time" class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+						<label
+							for="event-end-time"
+							class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2"
+						>
 							End Time
 						</label>
 						<input
@@ -298,13 +324,15 @@
 						/>
 					</div>
 				</div>
-
 				<!-- Color Selection -->
 				<div class="mb-6">
-					<label class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2">
+					<label
+						for="event-color"
+						class="block text-[#0d0f1c] text-base font-medium leading-normal pb-2"
+					>
 						Color
 					</label>
-					<div class="flex flex-wrap gap-3">
+					<div id="event-color" class="flex flex-wrap gap-3">
 						{#each colorOptions as colorOption}
 							<button
 								type="button"
@@ -346,4 +374,5 @@
 				</div>
 			</form>
 		</div>
+	</div>
 </div>

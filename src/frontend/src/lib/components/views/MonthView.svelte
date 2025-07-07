@@ -76,16 +76,23 @@
 
 	// Function to get events for a specific day from the passed 'events' prop
 	function getEventsForDay(date: Date): Event[] {
+		if (!events || events.length === 0) {
+			return [];
+		}
+
 		return events
 			.filter((event) => {
-				const eventStartDate = new Date(event.startTime); // Assuming startTime is a Date object or parsable
+				// Ensure event.startTime is a Date object
+				const eventStartDate =
+					event.startTime instanceof Date ? event.startTime : new Date(event.startTime);
+
 				return (
 					eventStartDate.getFullYear() === date.getFullYear() &&
 					eventStartDate.getMonth() === date.getMonth() &&
 					eventStartDate.getDate() === date.getDate()
 				);
 			})
-			.slice(0, 3); // Show max 3 events per day in month view, for example
+			.slice(0, 3); // Show max 3 events per day in month view
 	}
 
 	function handleDayClick(dayItem: { date: Date; isCurrentMonth: boolean; isToday: boolean }) {
@@ -97,14 +104,14 @@
 		}
 	}
 
-	function handleEventClick(event: Event, domEvent: MouseEvent) {
+	function handleEventClick(event: Event, domEvent: MouseEvent | KeyboardEvent) {
 		// Prevent the day click from triggering
 		domEvent.stopPropagation();
 
 		// Open the event modal for editing - using uiStore still for now
 		// This should be refactored to dispatch to parent Calendar component
 		const eventData = {
-			id: event.id,
+			id: typeof event.id === 'bigint' ? event.id.toString() : event.id,
 			title: event.title,
 			description: event.description,
 			startTime: event.startTime,
@@ -115,6 +122,11 @@
 	}
 
 	$: if (displayDate) {
+		updateCalendarGrid();
+	}
+
+	$: if (events) {
+		// Force reactivity when events change
 		updateCalendarGrid();
 	}
 

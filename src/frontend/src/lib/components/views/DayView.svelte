@@ -74,7 +74,7 @@
 		// For now, we'll use the uiStore approach, but this should be refactored
 		// to dispatch to the parent Calendar component
 		uiStore.openEventModal({
-			id: event.id,
+			id: typeof event.id === 'bigint' ? event.id.toString() : event.id,
 			title: event.title,
 			description: event.description,
 			startTime: event.startTime,
@@ -98,6 +98,10 @@
 	}
 
 	$: if (displayDate) {
+		updateDayView();
+	}
+
+	$: if (events) {
 		updateDayView();
 	}
 

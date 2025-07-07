@@ -70,28 +70,36 @@
 		eventModalDate = null;
 	}
 
+	async function handleEventSaved() {
+		// Clear cache to force fresh fetch and refresh events after saving to ensure UI is up to date
+		calendarStore.clearCache();
+		await fetchEventsForCurrentPeriod();
+		handleCloseEventModal();
+	}
+
 	async function fetchEventsForCurrentPeriod() {
 		let startDate: Date;
 		let endDate: Date;
 
 		if (currentView === 'month') {
-			startDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), 1);
-			endDate = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0, 23, 59, 59, 999);
+			// For month view, fetch the entire month plus a buffer for adjacent months
+			// This helps when switching from day view within the month
+			const year = displayDate.getFullYear();
+			const month = displayDate.getMonth();
+			startDate = new Date(year, month - 1, 1); // Start from previous month
+			endDate = new Date(year, month + 2, 0, 23, 59, 59, 999); // End at next month
 		} else if (currentView === 'day') {
-			startDate = new Date(
-				displayDate.getFullYear(),
-				displayDate.getMonth(),
-				displayDate.getDate()
-			);
-			endDate = new Date(
-				displayDate.getFullYear(),
-				displayDate.getMonth(),
-				displayDate.getDate(),
-				23,
-				59,
-				59,
-				999
-			);
+			// For day view, fetch a wider range (week) to improve performance when navigating days
+			const startOfWeek = new Date(displayDate);
+			startOfWeek.setDate(displayDate.getDate() - displayDate.getDay()); // Sunday
+			startOfWeek.setHours(0, 0, 0, 0);
+			
+			const endOfWeek = new Date(startOfWeek);
+			endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+			endOfWeek.setHours(23, 59, 59, 999);
+			
+			startDate = startOfWeek;
+			endDate = endOfWeek;
 		} else if (currentView === 'year') {
 			startDate = new Date(displayDate.getFullYear(), 0, 1);
 			endDate = new Date(displayDate.getFullYear(), 11, 31, 23, 59, 59, 999);
@@ -163,8 +171,12 @@
 			<YearView
 				bind:displayDate
 				events={currentEvents}
+				on:changeView={(e) => {
+					displayDate = e.detail.date;
+					currentView = e.detail.view;
+					fetchEventsForCurrentPeriod();
+				}}
 				on:openEventModalForDate={handleOpenEventModal}
-				on:switchToMonthView={handleSwitchToMonthView}
 			/>
 		{/if}
 	</div>
@@ -173,7 +185,7 @@
 		<EventFormModal
 			targetDate={eventModalDate}
 			on:close={handleCloseEventModal}
-			on:eventSaved={handleCloseEventModal}
+			on:eventSaved={handleEventSaved}
 		/>
 	{/if}
 </div>

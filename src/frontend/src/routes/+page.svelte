@@ -418,7 +418,8 @@
 									<button class="text-[#111418] hover:text-[#0c7ff2] transition-colors"
 										>Support</button
 									>
-									<button class="text-[#111418] hover:text-[#0c7ff2] transition-colors">Docs</button>
+									<button class="text-[#111418] hover:text-[#0c7ff2] transition-colors">Docs</button
+									>
 								</div>
 
 								<!-- Copyright -->

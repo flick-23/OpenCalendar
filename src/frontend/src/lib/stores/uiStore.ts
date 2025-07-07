@@ -4,7 +4,7 @@ import { writable, type Writable } from 'svelte/store';
 // This should align with the `Event` type from your backend `types.mo`
 // and potentially `calendarStore.ts`
 interface ModalEventData {
-  id?: string | number; // Or your EventId type
+  id?: string | number | bigint; // Support string (from UI), number, or bigint (from backend)
   title?: string;
   description?: string;
   startTime?: Date; // Using Date objects on the frontend for easier manipulation

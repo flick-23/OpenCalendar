@@ -7,7 +7,7 @@
 	let modalElement: HTMLDivElement;
 
 	// --- Component State ---
-	let eventId: Event['id'] | null = null;
+	let eventId: Event['id'] | string | number | null = null;
 	let title = '';
 	let description = '';
 	let startTimeStr = ''; // Store as ISO-like string for datetime-local input
@@ -168,8 +168,14 @@
 			};
 
 			if (eventId) {
-				// Update existing event
-				await calendarStore.updateEvent(eventId, eventData);
+				// Update existing event - convert eventId to bigint if it's a string or number
+				const idToUpdate =
+					typeof eventId === 'string'
+						? BigInt(eventId)
+						: typeof eventId === 'number'
+							? BigInt(eventId)
+							: eventId;
+				await calendarStore.updateEvent(idToUpdate, eventData);
 			} else {
 				// Create new event
 				await calendarStore.createEvent(eventData);
@@ -191,8 +197,16 @@
 		isLoading = true;
 		errorMessage = '';
 
+		// Convert eventId to bigint if it's a string or number
+		const idToDelete =
+			typeof eventId === 'string'
+				? BigInt(eventId)
+				: typeof eventId === 'number'
+					? BigInt(eventId)
+					: eventId;
+
 		calendarStore
-			.deleteEvent(eventId)
+			.deleteEvent(idToDelete)
 			.then(() => {
 				uiStore.closeEventModal();
 			})
@@ -263,8 +277,7 @@
 						class="text-gray-400 hover:text-gray-600 transition-colors"
 						on:click={() => uiStore.closeEventModal()}
 						aria-label="Close modal"
-					>}
-					>
+						>} >
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
 								stroke-linecap="round"

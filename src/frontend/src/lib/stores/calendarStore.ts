@@ -38,13 +38,15 @@ interface CalendarState {
   events: Event[];
   isLoading: boolean;
   error: string | null;
+  lastFetchedRange: { start: Date; end: Date } | null; // Track the last fetched range
 }
 
 // Initial state
 const initialState: CalendarState = {
   events: [],
   isLoading: false,
-  error: null
+  error: null,
+  lastFetchedRange: null
 };
 
 // Transform backend event (nanosecond timestamps) to frontend Event (Date objects)
@@ -72,6 +74,7 @@ export const calendarStore: Writable<CalendarState> & {
   createEvent: (eventData: Omit<Event, 'id' | 'owner'>) => Promise<void>;
   updateEvent: (eventId: bigint, updates: Partial<Omit<Event, 'id' | 'owner'>>) => Promise<void>;
   deleteEvent: (eventId: bigint) => Promise<void>;
+  clearCache: () => void;
 } = (() => {
   const store = writable<CalendarState>(initialState);
 
@@ -82,7 +85,7 @@ export const calendarStore: Writable<CalendarState> & {
 
     /**
      * Fetches events for a given time range from the backend.
-     * Updates the store with the fetched events for the specific range.
+     * Intelligently merges with existing events to avoid redundant fetches.
      * 
      * @param startTime - Range start as Date object
      * @param endTime - Range end as Date object
@@ -101,17 +104,32 @@ export const calendarStore: Writable<CalendarState> & {
         const backendEvents = await actor.get_events_for_range(startNano, endNano);
 
         // Transform and sort events
-        const events = backendEvents
+        const newEvents = backendEvents
           .map(transformBackendEvent)
           .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-        console.log(`Fetched ${events.length} events`);
+        console.log(`Fetched ${newEvents.length} events for range`);
 
-        store.update(s => ({
-          ...s,
-          events,
-          isLoading: false
-        }));
+        store.update(s => {
+          // Create a map of existing events by ID for faster lookup
+          const existingEventsMap = new Map(s.events.map(e => [e.id.toString(), e]));
+          
+          // Add new events, replacing any existing ones with the same ID
+          newEvents.forEach(event => {
+            existingEventsMap.set(event.id.toString(), event);
+          });
+          
+          // Convert back to array and sort
+          const allEvents = Array.from(existingEventsMap.values())
+            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+          return {
+            ...s,
+            events: allEvents,
+            isLoading: false,
+            lastFetchedRange: { start: new Date(startTime), end: new Date(endTime) }
+          };
+        });
 
       } catch (error: unknown) {
         console.error('Error fetching events:', error);
@@ -265,6 +283,19 @@ export const calendarStore: Writable<CalendarState> & {
           error: error instanceof Error ? error.message : 'Failed to delete event'
         }));
       }
+    },
+
+    /**
+     * Clears the event cache and resets the store.
+     * Useful for forcing a fresh fetch of events.
+     */
+    clearCache: (): void => {
+      store.update(s => ({
+        ...s,
+        events: [],
+        lastFetchedRange: null,
+        error: null
+      }));
     }
   };
 })();
