@@ -2,6 +2,7 @@
 	import './app.css'; // Import global styles (Tailwind)
 	import { navigating } from '$app/stores';
 	import { isLoggedIn, logout } from '$lib/stores/authStore';
+	import { applyTheme } from '$lib/stores/settingsStore';
 	import { onMount } from 'svelte';
 
 	// Optional: Loading indicator during navigation
@@ -12,6 +13,11 @@
 		await logout();
 		// The +layout.ts load function should handle redirecting to /login
 	};
+
+	// Apply theme on mount
+	onMount(() => {
+		applyTheme();
+	});
 
 	// This is mostly for structure. Specific nav bars, sidebars etc. would go here or be imported.
 </script>

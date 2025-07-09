@@ -277,7 +277,7 @@
 						class="text-gray-400 hover:text-gray-600 transition-colors"
 						on:click={() => uiStore.closeEventModal()}
 						aria-label="Close modal"
-						>} >
+					>
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
 								stroke-linecap="round"

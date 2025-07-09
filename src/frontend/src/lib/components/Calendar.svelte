@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { calendarStore, type Event } from '$lib/stores/calendarStore';
+	import { getDefaultView } from '$lib/stores/settingsStore';
 	import CalendarHeader from '$lib/components/CalendarHeader.svelte';
 	import MonthView from '$lib/components/views/MonthView.svelte';
 	import DayView from '$lib/components/views/DayView.svelte';
 	import YearView from '$lib/components/views/YearView.svelte';
 	import EventFormModal from '$lib/components/EventFormModal.svelte';
+	import SettingsModal from '$lib/components/SettingsModal.svelte';
 
 	type CalendarView = 'month' | 'day' | 'year';
 
-	let currentView: CalendarView = 'month';
+	let currentView: CalendarView = getDefaultView() as CalendarView;
 	let displayDate: Date = new Date(); // Represents the start of the current period being viewed
 
 	let showEventModal = false;
@@ -249,6 +251,9 @@
 			on:eventSaved={handleEventSaved}
 		/>
 	{/if}
+
+	<!-- Settings Modal -->
+	<SettingsModal />
 </div>
 
 <style lang="postcss">

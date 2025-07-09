@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { logout } from '$lib/stores/authStore';
+	import { uiStore } from '$lib/stores/uiStore';
+	import { goto } from '$app/navigation';
 	import {
 		Plus,
 		Search,
@@ -46,6 +48,10 @@
 	const handleLogout = async () => {
 		await logout();
 		// The +layout.ts load function should handle redirecting to home
+	};
+
+	const handleSettings = () => {
+		uiStore.openSettings();
 	};
 
 	$: periodLabel = (() => {
@@ -134,6 +140,7 @@
 		<button
 			class="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full text-[#111418] hover:bg-[#f0f2f5] transition-colors hidden md:flex"
 			title="Settings"
+			on:click={handleSettings}
 		>
 			<Settings size={18} />
 		</button>

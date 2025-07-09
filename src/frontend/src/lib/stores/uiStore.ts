@@ -20,6 +20,7 @@ interface UiState {
   eventModalData: ModalEventData | null; // Data for the event being edited/created
   // Add other UI states as needed, e.g., isSidebarOpen, currentView ('month', 'week', 'day')
   currentCalendarViewDate: Date; // The date the main calendar is centered on (e.g., for month view, the month shown)
+  isSettingsOpen: boolean; // For settings modal/page state
 }
 
 const initialState: UiState = {
@@ -27,6 +28,7 @@ const initialState: UiState = {
   selectedDay: null,
   eventModalData: null,
   currentCalendarViewDate: new Date(),
+  isSettingsOpen: false,
 };
 
 export const uiStore: Writable<UiState> & {
@@ -34,6 +36,8 @@ export const uiStore: Writable<UiState> & {
   closeEventModal: () => void;
   setSelectedDay: (day: Date | null) => void;
   setCurrentCalendarViewDate: (date: Date) => void;
+  openSettings: () => void;
+  closeSettings: () => void;
 } = (() => {
   const store = writable<UiState>(initialState);
 
@@ -66,6 +70,14 @@ export const uiStore: Writable<UiState> & {
 
     setCurrentCalendarViewDate: (date: Date) => {
       store.update(state => ({ ...state, currentCalendarViewDate: date }));
+    },
+
+    openSettings: () => {
+      store.update(state => ({ ...state, isSettingsOpen: true }));
+    },
+
+    closeSettings: () => {
+      store.update(state => ({ ...state, isSettingsOpen: false }));
     }
   };
 })();

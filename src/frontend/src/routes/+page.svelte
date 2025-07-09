@@ -71,7 +71,9 @@
 		<!-- Show loading while profile is being fetched/registered -->
 		<div class="min-h-screen bg-white flex items-center justify-center">
 			<div class="text-center">
-				<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0c7ff2] mx-auto mb-4"></div>
+				<div
+					class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0c7ff2] mx-auto mb-4"
+				></div>
 				<p class="text-[#111418] text-lg font-medium">Setting up your account...</p>
 			</div>
 		</div>
