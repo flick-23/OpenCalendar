@@ -260,12 +260,24 @@ export const calendarStore: Writable<CalendarState> & {
           
           // Update the event in the current cache
           const updatedEvent = transformBackendEvent(result.ok);
+          console.log('Transformed updated event:', updatedEvent);
           
-          store.update(s => ({
-            ...s,
-            events: s.events.map(e => e.id === eventId ? updatedEvent : e).sort((a, b) => a.startTime.getTime() - b.startTime.getTime()),
-            isLoading: false
-          }));
+          store.update(s => {
+            console.log(`UpdateEvent: Before update - ${s.events.length} events in cache`);
+            const newEvents = s.events.map(e => {
+              if (e.id.toString() === eventId.toString()) {
+                console.log(`UpdateEvent: Replacing event ${e.id} with new color ${updatedEvent.color}`);
+                return updatedEvent;
+              }
+              return e;
+            }).sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+            console.log(`UpdateEvent: After update - ${newEvents.length} events in cache`);
+            return {
+              ...s,
+              events: newEvents,
+              isLoading: false
+            };
+          });
           
         } else {
           throw new Error(result.err);
@@ -302,7 +314,7 @@ export const calendarStore: Writable<CalendarState> & {
           // Remove the event from the current cache
           store.update(s => ({
             ...s,
-            events: s.events.filter(e => e.id !== eventId),
+            events: s.events.filter(e => e.id.toString() !== eventId.toString()),
             isLoading: false
           }));
           

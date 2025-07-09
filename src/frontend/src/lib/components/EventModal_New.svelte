@@ -12,24 +12,20 @@
 	let description = '';
 	let startTimeStr = ''; // Store as ISO-like string for datetime-local input
 	let endTimeStr = ''; // Store as ISO-like string for datetime-local input
+
+	// Separate date and time inputs
+	let startDate = '';
+	let startTime = '';
+	let endDate = '';
+	let endTime = '';
+
 	let selectedColor = 'blue'; // Default color
 
 	let isLoading = false;
 	let errorMessage = '';
 
-	// --- Colors (from reference project or Tailwind defaults) ---
-	const colors = [
-		'red',
-		'orange',
-		'yellow',
-		'green',
-		'teal',
-		'blue',
-		'indigo',
-		'purple',
-		'pink',
-		'gray'
-	];
+	// --- Colors (9 options for better UI) ---
+	const colors = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'indigo', 'purple', 'pink'];
 
 	// Map color names to hex values
 	const colorMap: Record<string, string> = {
@@ -41,8 +37,7 @@
 		blue: '#3b82f6',
 		indigo: '#6366f1',
 		purple: '#a855f7',
-		pink: '#ec4899',
-		gray: '#6b7280'
+		pink: '#ec4899'
 	};
 
 	// Map color names to Tailwind classes
@@ -55,9 +50,19 @@
 		blue: 'bg-blue-500',
 		indigo: 'bg-indigo-500',
 		purple: 'bg-purple-500',
-		pink: 'bg-pink-500',
-		gray: 'bg-gray-500'
+		pink: 'bg-pink-500'
 	};
+
+	// Helper function to convert hex color back to color name
+	function getColorNameFromHex(hexColor: string): string {
+		for (const [colorName, hexValue] of Object.entries(colorMap)) {
+			if (hexValue.toLowerCase() === hexColor.toLowerCase()) {
+				return colorName;
+			}
+		}
+		// If no exact match found, default to blue
+		return 'blue';
+	}
 
 	// --- Store Subscriptions ---
 	let uiState = get(uiStore);
@@ -81,13 +86,26 @@
 			const eTime = eventData.endTime ? new Date(eventData.endTime) : null;
 			startTimeStr = sTime ? formatDateTimeLocal(sTime) : '';
 			endTimeStr = eTime ? formatDateTimeLocal(eTime) : '';
-			selectedColor = eventData.color || 'blue';
+
+			// Populate separate date and time inputs for existing events
+			if (sTime) {
+				startDate = formatDateOnly(sTime);
+				startTime = formatTimeOnly(sTime);
+			}
+			if (eTime) {
+				endDate = formatDateOnly(eTime);
+				endTime = formatTimeOnly(eTime);
+			}
+
+			// Convert hex color back to color name for the UI
+			selectedColor = eventData.color ? getColorNameFromHex(eventData.color) : 'blue';
 		} else {
 			// Creating new event
 			eventId = null;
 			title = eventData?.title || ''; // Allow pre-filled title for new event
 			description = eventData?.description || '';
-			selectedColor = eventData?.color || 'blue';
+			// For new events, eventData.color should be a color name, but just in case...
+			selectedColor = eventData?.color ? getColorNameFromHex(eventData.color) : 'blue';
 
 			const defaultStartTime = selectedDay ? new Date(selectedDay) : new Date();
 			if (!eventData?.startTime) {
@@ -109,6 +127,12 @@
 
 			startTimeStr = formatDateTimeLocal(defaultStartTime);
 			endTimeStr = formatDateTimeLocal(defaultEndTime);
+
+			// Populate separate date and time inputs
+			startDate = formatDateOnly(defaultStartTime);
+			startTime = formatTimeOnly(defaultStartTime);
+			endDate = formatDateOnly(defaultEndTime);
+			endTime = formatTimeOnly(defaultEndTime);
 		}
 	}
 
@@ -118,6 +142,10 @@
 		description = '';
 		startTimeStr = '';
 		endTimeStr = '';
+		startDate = '';
+		startTime = '';
+		endDate = '';
+		endTime = '';
 		selectedColor = 'blue';
 		errorMessage = '';
 		isLoading = false;
@@ -133,6 +161,26 @@
 		return `${year}-${month}-${day}T${hours}:${minutes}`;
 	}
 
+	// Helper to format Date to 'yyyy-MM-dd' for date input
+	function formatDateOnly(date: Date): string {
+		const year = date.getFullYear();
+		const month = String(date.getMonth() + 1).padStart(2, '0');
+		const day = String(date.getDate()).padStart(2, '0');
+		return `${year}-${month}-${day}`;
+	}
+
+	// Helper to format Date to 'HH:mm' for time input
+	function formatTimeOnly(date: Date): string {
+		const hours = String(date.getHours()).padStart(2, '0');
+		const minutes = String(date.getMinutes()).padStart(2, '0');
+		return `${hours}:${minutes}`;
+	}
+
+	// Helper to combine separate date and time strings into a Date object
+	function combineDateAndTime(dateStr: string, timeStr: string): Date {
+		return new Date(`${dateStr}T${timeStr}`);
+	}
+
 	function parseDateTime(dateTimeStr: string): Date {
 		return new Date(dateTimeStr);
 	}
@@ -142,15 +190,30 @@
 			errorMessage = 'Title is required.';
 			return;
 		}
-		if (!startTimeStr || !endTimeStr) {
-			errorMessage = 'Start and end times are required.';
-			return;
+
+		// Check if we have separate date/time inputs or datetime-local inputs
+		let startDateTime: Date;
+		let endDateTime: Date;
+
+		if (startDate && startTime && endDate && endTime) {
+			// Use separate date and time inputs
+			if (!startDate || !startTime || !endDate || !endTime) {
+				errorMessage = 'Start and end dates and times are required.';
+				return;
+			}
+			startDateTime = combineDateAndTime(startDate, startTime);
+			endDateTime = combineDateAndTime(endDate, endTime);
+		} else {
+			// Fallback to datetime-local inputs
+			if (!startTimeStr || !endTimeStr) {
+				errorMessage = 'Start and end times are required.';
+				return;
+			}
+			startDateTime = parseDateTime(startTimeStr);
+			endDateTime = parseDateTime(endTimeStr);
 		}
 
-		const startTime = parseDateTime(startTimeStr);
-		const endTime = parseDateTime(endTimeStr);
-
-		if (startTime >= endTime) {
+		if (startDateTime >= endDateTime) {
 			errorMessage = 'End time must be after start time.';
 			return;
 		}
@@ -162,8 +225,8 @@
 			const eventData = {
 				title,
 				description,
-				startTime,
-				endTime,
+				startTime: startDateTime,
+				endTime: endDateTime,
 				color: colorMap[selectedColor] || selectedColor
 			};
 
@@ -308,52 +371,101 @@
 						></textarea>
 					</div>
 
-					<!-- Start Time -->
-					<div>
-						<label for="startTime" class="block text-sm font-medium text-gray-700 mb-1">
-							Start Time
-						</label>
-						<input
-							id="startTime"
-							type="datetime-local"
-							bind:value={startTimeStr}
-							class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-							required
-						/>
-					</div>
+					<!-- Date and Time -->
+					<div class="space-y-4">
+						<!-- Start Date and Time -->
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div class="space-y-2">
+								<label for="startDate" class="block text-sm font-medium text-gray-700">
+									Start Date
+								</label>
+								<input
+									id="startDate"
+									type="date"
+									bind:value={startDate}
+									class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+									required
+								/>
+							</div>
+							<div class="space-y-2">
+								<label for="startTimeInput" class="block text-sm font-medium text-gray-700">
+									Start Time
+								</label>
+								<input
+									id="startTimeInput"
+									type="time"
+									bind:value={startTime}
+									class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+									required
+								/>
+							</div>
+						</div>
 
-					<!-- End Time -->
-					<div>
-						<label for="endTime" class="block text-sm font-medium text-gray-700 mb-1">
-							End Time
-						</label>
-						<input
-							id="endTime"
-							type="datetime-local"
-							bind:value={endTimeStr}
-							class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-							required
-						/>
+						<!-- End Date and Time -->
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div class="space-y-2">
+								<label for="endDate" class="block text-sm font-medium text-gray-700">
+									End Date
+								</label>
+								<input
+									id="endDate"
+									type="date"
+									bind:value={endDate}
+									class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+									required
+								/>
+							</div>
+							<div class="space-y-2">
+								<label for="endTimeInput" class="block text-sm font-medium text-gray-700">
+									End Time
+								</label>
+								<input
+									id="endTimeInput"
+									type="time"
+									bind:value={endTime}
+									class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+									required
+								/>
+							</div>
+						</div>
 					</div>
 
 					<!-- Color Selection -->
-					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-2"> Color </label>
-						<div class="flex flex-wrap gap-2">
+					<fieldset class="space-y-3">
+						<legend class="block text-sm font-medium text-gray-700"> Event Color </legend>
+						<div class="flex flex-wrap gap-3">
 							{#each colors as color}
 								<button
 									type="button"
-									class="w-8 h-8 rounded-full border-2 transition-all duration-200 {tailwindColorClasses[
+									class="w-10 h-10 rounded-full border-2 transition-all duration-200 {tailwindColorClasses[
 										color
 									]} {selectedColor === color
-										? 'border-gray-800 ring-2 ring-gray-300'
-										: 'border-gray-200 hover:border-gray-400'}"
+										? 'border-gray-800 ring-2 ring-gray-300 scale-110'
+										: 'border-gray-200 hover:border-gray-400 hover:scale-105'} shadow-sm"
 									on:click={() => (selectedColor = color)}
-									title={color}
-								></button>
+									title={color.charAt(0).toUpperCase() + color.slice(1)}
+									aria-label={`Select ${color} color`}
+								>
+									{#if selectedColor === color}
+										<svg
+											class="w-5 h-5 text-white mx-auto"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 13l4 4L19 7"
+											></path>
+										</svg>
+									{/if}
+								</button>
 							{/each}
 						</div>
-					</div>
+					</fieldset>
 
 					<!-- Submit Buttons -->
 					<div class="flex justify-between pt-4">

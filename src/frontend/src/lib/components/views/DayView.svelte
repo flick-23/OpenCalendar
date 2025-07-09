@@ -12,6 +12,20 @@
 	let timeSlots: { hour: number; timeLabel: string; events: Event[] }[] = [];
 	let allDayEvents: Event[] = [];
 
+	// Reactive statements to update view when displayDate or events change
+	$: if (displayDate) {
+		updateDayView();
+	}
+
+	$: if (events) {
+		console.log(`DayView: Received ${events.length} events`);
+		// Log a sample event to see the color values
+		if (events.length > 0) {
+			console.log(`DayView: Sample event color:`, events[0].color);
+		}
+		updateDayView();
+	}
+
 	function updateDayView() {
 		currentDayFormatted = displayDate.toLocaleDateString('default', {
 			weekday: 'long',
@@ -105,6 +119,10 @@
 
 	$: if (events) {
 		console.log(`DayView: Received ${events.length} events`);
+		// Log a sample event to see the color values
+		if (events.length > 0) {
+			console.log(`DayView: Sample event color:`, events[0].color);
+		}
 		updateDayView();
 	}
 
@@ -130,7 +148,7 @@
 		<div class="all-day-events mb-8 p-4 bg-[#f8f9fa] rounded-lg border border-[#f0f2f5]">
 			<h3 class="text-[#111418] text-sm font-bold leading-normal mb-3">All Day</h3>
 			<div class="space-y-2">
-				{#each allDayEvents as event}
+				{#each allDayEvents as event (event.id)}
 					<div
 						class="event-item p-3 rounded-lg text-white text-sm cursor-pointer hover:opacity-90 transition-all shadow-sm"
 						style:background-color={event.color || '#0c7ff2'}
@@ -192,7 +210,7 @@
 						{slot.timeLabel}
 					</div>
 					<div class="time-content flex-1 min-h-[60px] py-3 px-4 relative">
-						{#each slot.events as event}
+						{#each slot.events as event (event.id)}
 							<div
 								class="event-item absolute left-4 right-4 p-3 rounded-lg text-white text-sm cursor-pointer hover:opacity-90 hover:shadow-md transition-all z-20"
 								style:background-color={event.color || '#0c7ff2'}
@@ -249,7 +267,7 @@
 
 	.event-item {
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-		background: linear-gradient(135deg, var(--event-color, #0c7ff2), var(--event-color, #0c7ff2));
+		/* Remove the gradient background so inline styles take precedence */
 	}
 
 	.event-item:hover {

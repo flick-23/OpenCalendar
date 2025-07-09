@@ -15,23 +15,22 @@
 	let startTime = '';
 	let endDate = '';
 	let endTime = '';
-	let color = '#607afb'; // Default event color matching the new theme
+	let color = '#3b82f6'; // Default event color (blue) matching the other modals
 
 	let isLoading = false;
 	let errorMessage = '';
 
-	// Predefined color options matching the new design
+	// Predefined color options matching the new design (9 colors to match other modals)
 	const colorOptions = [
-		{ name: 'Primary', value: '#607afb' },
-		{ name: 'Blue', value: '#0c7ff2' },
 		{ name: 'Red', value: '#ef4444' },
-		{ name: 'Green', value: '#10b981' },
-		{ name: 'Yellow', value: '#f59e0b' },
-		{ name: 'Purple', value: '#8b5cf6' },
-		{ name: 'Pink', value: '#ec4899' },
-		{ name: 'Indigo', value: '#6366f1' },
+		{ name: 'Orange', value: '#f97316' },
+		{ name: 'Yellow', value: '#eab308' },
+		{ name: 'Green', value: '#22c55e' },
 		{ name: 'Teal', value: '#14b8a6' },
-		{ name: 'Orange', value: '#f97316' }
+		{ name: 'Blue', value: '#3b82f6' },
+		{ name: 'Indigo', value: '#6366f1' },
+		{ name: 'Purple', value: '#a855f7' },
+		{ name: 'Pink', value: '#ec4899' }
 	];
 
 	// Helper to format Date to 'YYYY-MM-DD' for date input

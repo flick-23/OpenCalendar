@@ -136,6 +136,10 @@
 	$: if (events) {
 		// Force reactivity when events change
 		console.log(`MonthView: Received ${events.length} events`);
+		// Log a sample event to see the color values
+		if (events.length > 0) {
+			console.log(`MonthView: Sample event color:`, events[0].color);
+		}
 		updateCalendarGrid();
 	}
 
@@ -229,7 +233,7 @@
 	}
 
 	.event-item {
-		background: linear-gradient(135deg, var(--event-color, #0c7ff2), var(--event-color, #0c7ff2));
+		/* Remove the gradient background so inline styles take precedence */
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
 
