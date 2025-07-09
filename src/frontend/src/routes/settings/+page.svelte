@@ -78,7 +78,7 @@
 			if ($userProfile && $settingsStore.displayName !== $userProfile.name) {
 				saveMessage =
 					// 'Settings saved! Your display name will be updated locally, but will reset when you refresh the page.';
-					'Settings saved! Refresh the page if you don\'t see changes.';
+					"Settings saved! Refresh the page if you don't see changes.";
 			} else {
 				saveMessage = 'Settings saved successfully!';
 			}
