@@ -75,6 +75,8 @@ export const calendarStore: Writable<CalendarState> & {
   updateEvent: (eventId: bigint, updates: Partial<Omit<Event, 'id' | 'owner'>>) => Promise<void>;
   deleteEvent: (eventId: bigint) => Promise<void>;
   clearCache: () => void;
+  refreshEvents: (startTime: Date, endTime: Date) => Promise<void>;
+  ensureEventsForView: (startTime: Date, endTime: Date) => Promise<void>;
 } = (() => {
   const store = writable<CalendarState>(initialState);
 
@@ -104,28 +106,49 @@ export const calendarStore: Writable<CalendarState> & {
         const backendEvents = await actor.get_events_for_range(startNano, endNano);
 
         // Transform and sort events
-        const newEvents = backendEvents
+        const fetchedEvents = backendEvents
           .map(transformBackendEvent)
           .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-        console.log(`Fetched ${newEvents.length} events for range`);
+        console.log(`Fetched ${fetchedEvents.length} events for range`);
 
         store.update(s => {
+          console.log(`Store update: Currently have ${s.events.length} events in cache`);
+          
           // Create a map of existing events by ID for faster lookup
           const existingEventsMap = new Map(s.events.map(e => [e.id.toString(), e]));
           
-          // Add new events, replacing any existing ones with the same ID
-          newEvents.forEach(event => {
+          // Add/update fetched events in the map
+          fetchedEvents.forEach(event => {
             existingEventsMap.set(event.id.toString(), event);
           });
           
-          // Convert back to array and sort
-          const allEvents = Array.from(existingEventsMap.values())
-            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+          // For the fetched range, remove any existing events that weren't returned
+          // This handles backend deletions properly
+          const rangeStart = startTime.getTime();
+          const rangeEnd = endTime.getTime();
+          
+          // Get all events and check which ones should be removed
+          const finalEvents = Array.from(existingEventsMap.values()).filter(event => {
+            const eventTime = event.startTime.getTime();
+            
+            // If event is within the fetched range, it should be in fetchedEvents
+            if (eventTime >= rangeStart && eventTime <= rangeEnd) {
+              return fetchedEvents.some(fe => fe.id.toString() === event.id.toString());
+            }
+            
+            // Keep events outside the fetched range
+            return true;
+          });
+          
+          // Sort all events by start time
+          const sortedEvents = finalEvents.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+          console.log(`Store update: Final result has ${sortedEvents.length} events`);
 
           return {
             ...s,
-            events: allEvents,
+            events: sortedEvents,
             isLoading: false,
             lastFetchedRange: { start: new Date(startTime), end: new Date(endTime) }
           };
@@ -171,12 +194,24 @@ export const calendarStore: Writable<CalendarState> & {
           
           // Add the new event to the current cache immediately
           const newEvent = transformBackendEvent(result.ok);
+          console.log('Adding new event to cache:', newEvent);
           
-          store.update(s => ({
-            ...s,
-            events: [...s.events, newEvent].sort((a, b) => a.startTime.getTime() - b.startTime.getTime()),
-            isLoading: false
-          }));
+          store.update(s => {
+            console.log(`CreateEvent: Currently have ${s.events.length} events in cache`);
+            
+            // Check if event already exists (shouldn't happen, but safety check)
+            const existingEvents = s.events.filter(e => e.id.toString() !== newEvent.id.toString());
+            
+            const updatedEvents = [...existingEvents, newEvent].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+            
+            console.log(`CreateEvent: After adding new event, have ${updatedEvents.length} events in cache`);
+            
+            return {
+              ...s,
+              events: updatedEvents,
+              isLoading: false
+            };
+          });
           
         } else {
           throw new Error(result.err);
@@ -296,6 +331,59 @@ export const calendarStore: Writable<CalendarState> & {
         lastFetchedRange: null,
         error: null
       }));
+    },
+
+    /**
+     * Clears cache and fetches events for the given range.
+     * Useful for ensuring a complete refresh of event data.
+     */
+    refreshEvents: async (startTime: Date, endTime: Date): Promise<void> => {
+      console.log('Refreshing events - clearing cache and fetching fresh data');
+      
+      // Clear cache first
+      store.update(s => ({
+        ...s,
+        events: [],
+        lastFetchedRange: null,
+        error: null
+      }));
+      
+      // Then fetch fresh data
+      await calendarStore.fetchEvents(startTime, endTime);
+    },
+
+    /**
+     * Ensures events are properly loaded for view switching.
+     * This method intelligently handles caching and range expansion.
+     */
+    ensureEventsForView: async (startTime: Date, endTime: Date): Promise<void> => {
+      const currentState = get(store);
+      
+      // If we have no events or the range doesn't overlap with cached range, fetch new data
+      if (!currentState.lastFetchedRange || currentState.events.length === 0) {
+        console.log('No cached events, fetching fresh data');
+        await calendarStore.fetchEvents(startTime, endTime);
+        return;
+      }
+      
+      // Check if we need to expand the range
+      const cachedStart = currentState.lastFetchedRange.start.getTime();
+      const cachedEnd = currentState.lastFetchedRange.end.getTime();
+      const requestedStart = startTime.getTime();
+      const requestedEnd = endTime.getTime();
+      
+      // If requested range is within cached range, no need to fetch
+      if (requestedStart >= cachedStart && requestedEnd <= cachedEnd) {
+        console.log('Requested range is within cached range, no fetch needed');
+        return;
+      }
+      
+      // Expand the range to include both cached and requested ranges
+      const expandedStart = new Date(Math.min(cachedStart, requestedStart));
+      const expandedEnd = new Date(Math.max(cachedEnd, requestedEnd));
+      
+      console.log('Expanding cached range for view switch');
+      await calendarStore.fetchEvents(expandedStart, expandedEnd);
     }
   };
 })();

@@ -40,17 +40,18 @@ export const fetchUserProfile = async (): Promise<void> => {
         console.log("User profile fetched and set:", profileResult);
     } else {
         // User not registered, attempt auto-registration
-        console.log("No profile found, attempting to register user...");
+        console.log("No profile found, attempting to register user automatically...");
         try {
-          // Extract principal for a default name if needed
+          // Extract principal for a default name
           const principal = currentIdentity.getPrincipal();
           const principalText = principal.toString();
-          // Use a simple name - in a real app, you might want to prompt the user
+          // Use a simple name based on principal
           const defaultName = `User-${principalText.slice(-8)}`;
           
+          console.log(`Auto-registering user with name: ${defaultName}`);
           const newProfile = await userRegistryActor.register(defaultName);
           userProfile.set(newProfile);
-          console.log("User registered successfully:", newProfile);
+          console.log("User auto-registered successfully:", newProfile);
         } catch (registerError) {
           console.error("Failed to auto-register user:", registerError);
           userProfile.set(null);

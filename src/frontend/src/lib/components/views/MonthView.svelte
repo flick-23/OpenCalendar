@@ -86,11 +86,19 @@
 				const eventStartDate =
 					event.startTime instanceof Date ? event.startTime : new Date(event.startTime);
 
-				return (
+				// Check if the event starts on this day
+				const sameDay =
 					eventStartDate.getFullYear() === date.getFullYear() &&
 					eventStartDate.getMonth() === date.getMonth() &&
-					eventStartDate.getDate() === date.getDate()
-				);
+					eventStartDate.getDate() === date.getDate();
+
+				return sameDay;
+			})
+			.sort((a, b) => {
+				// Sort by start time
+				const aTime = a.startTime instanceof Date ? a.startTime : new Date(a.startTime);
+				const bTime = b.startTime instanceof Date ? b.startTime : new Date(b.startTime);
+				return aTime.getTime() - bTime.getTime();
 			})
 			.slice(0, 3); // Show max 3 events per day in month view
 	}
@@ -127,6 +135,7 @@
 
 	$: if (events) {
 		// Force reactivity when events change
+		console.log(`MonthView: Received ${events.length} events`);
 		updateCalendarGrid();
 	}
 

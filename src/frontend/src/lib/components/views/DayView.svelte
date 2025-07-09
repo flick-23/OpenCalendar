@@ -30,6 +30,8 @@
 			);
 		});
 
+		console.log(`DayView: Found ${dayEvents.length} events for ${currentDayFormatted}`);
+
 		// Separate all-day events from timed events
 		allDayEvents = dayEvents.filter((event) => {
 			const start = new Date(event.startTime);
@@ -98,6 +100,11 @@
 	}
 
 	$: if (displayDate) {
+		updateDayView();
+	}
+
+	$: if (events) {
+		console.log(`DayView: Received ${events.length} events`);
 		updateDayView();
 	}
 

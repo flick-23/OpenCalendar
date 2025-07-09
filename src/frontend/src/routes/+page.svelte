@@ -8,61 +8,20 @@
 		fetchUserProfile,
 		login
 	} from '$lib/stores/authStore';
-	import { getUserRegistryActor } from '$lib/actors/actors';
 	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
-	let showRegistration = false;
-	let registrationName = '';
-	let registrationLoading = false;
-	let registrationError = '';
 	let loginLoading = false;
 
-	$: if (
-		$isLoggedIn &&
-		$userProfile === null &&
-		$authIdentity &&
-		!$authIdentity.getPrincipal().isAnonymous()
-	) {
-		showRegistration = true;
-	} else {
-		showRegistration = false;
-	}
-
 	// Handle redirect after login
-	$: if ($isLoggedIn && $userProfile) {
+	$: if ($isLoggedIn) {
 		const redirectParam = $page.url.searchParams.get('redirect');
 		if (redirectParam) {
 			const destination = decodeURIComponent(redirectParam);
 			goto(destination, { replaceState: true });
 		}
 	}
-
-	const handleRegistration = async () => {
-		if (!registrationName.trim()) {
-			registrationError = 'Please enter your name.';
-			return;
-		}
-		registrationLoading = true;
-		registrationError = '';
-		try {
-			const currentIdentity = $authIdentity;
-			if (!currentIdentity) throw new Error('Identity not available.');
-			const userRegistryActor = await getUserRegistryActor(currentIdentity);
-			await userRegistryActor.register(registrationName);
-			await fetchUserProfile(); // Refresh profile
-			showRegistration = false;
-		} catch (error: any) {
-			console.error('Registration failed:', error);
-			registrationError = error.message?.includes('User already registered')
-				? 'Already registered. Refreshing...'
-				: 'Registration failed.';
-			if (registrationError.includes('Refreshing')) await fetchUserProfile();
-		} finally {
-			registrationLoading = false;
-		}
-	};
 
 	const handleInternetIdentityLogin = async () => {
 		loginLoading = true;
@@ -105,43 +64,19 @@
 	/>
 </svelte:head>
 
-{#if showRegistration}
-	<div
-		class="min-h-screen bg-white flex items-center justify-center px-4"
-		style="font-family: 'Plus Jakarta Sans', 'Noto Sans', sans-serif;"
-	>
-		<div
-			class="registration-form bg-white p-8 rounded-lg shadow-lg border border-[#f0f2f5] max-w-md w-full"
-		>
-			<h2
-				class="text-[#111418] text-2xl font-bold leading-tight tracking-[-0.015em] text-center mb-6"
-			>
-				Welcome! Please Register
-			</h2>
-			{#if registrationError}
-				<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-					<p class="text-red-600 text-sm font-medium">{registrationError}</p>
-				</div>
-			{/if}
-			<input
-				type="text"
-				bind:value={registrationName}
-				placeholder="Your Name"
-				class="w-full px-3 py-2 border border-[#f0f2f5] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0c7ff2] focus:border-[#0c7ff2] text-[#111418] bg-white mb-4"
-				disabled={registrationLoading}
-			/>
-			<button
-				on:click={handleRegistration}
-				disabled={registrationLoading}
-				class="w-full flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-[#0c7ff2] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#0a6fd1] transition-colors disabled:opacity-50"
-			>
-				{#if registrationLoading}Registering...{:else}Register{/if}
-			</button>
+{#if $isLoggedIn}
+	{#if $userProfile}
+		<CalendarComponent />
+	{:else}
+		<!-- Show loading while profile is being fetched/registered -->
+		<div class="min-h-screen bg-white flex items-center justify-center">
+			<div class="text-center">
+				<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0c7ff2] mx-auto mb-4"></div>
+				<p class="text-[#111418] text-lg font-medium">Setting up your account...</p>
+			</div>
 		</div>
-	</div>
-{:else if $isLoggedIn && $userProfile}
-	<CalendarComponent />
-{:else if !$isLoggedIn}
+	{/if}
+{:else}
 	<!-- Landing Page -->
 	<div
 		class="relative flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden"
@@ -431,8 +366,6 @@
 			</div>
 		</div>
 	</div>
-{:else}
-	<p class="text-center text-gray-500 mt-10">Loading user information...</p>
 {/if}
 
 <!-- Add EventModal component to handle event viewing/editing -->

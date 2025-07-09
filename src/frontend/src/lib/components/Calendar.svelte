@@ -27,9 +27,14 @@
 	});
 
 	function handleSetView(event: CustomEvent<CalendarView>) {
-		currentView = event.detail;
-		// Fetch events for the new view
-		fetchEventsForCurrentPeriod();
+		const newView = event.detail;
+		const oldView = currentView;
+		console.log(`Switching from ${oldView} to ${newView} view`);
+
+		currentView = newView;
+
+		// Use the new ensureEventsForView method for better cache management
+		ensureEventsForViewSwitch();
 	}
 
 	function handleNavigate(event: CustomEvent<'prev' | 'next' | 'today'>) {
@@ -71,8 +76,8 @@
 	}
 
 	async function handleEventSaved() {
-		// Clear cache to force fresh fetch and refresh events after saving to ensure UI is up to date
-		calendarStore.clearCache();
+		console.log('Event saved, refreshing events for current view');
+		// Refresh events after saving to ensure UI is up to date across all views
 		await fetchEventsForCurrentPeriod();
 		handleCloseEventModal();
 	}
@@ -86,23 +91,31 @@
 			// This helps when switching from day view within the month
 			const year = displayDate.getFullYear();
 			const month = displayDate.getMonth();
-			startDate = new Date(year, month - 1, 1); // Start from previous month
-			endDate = new Date(year, month + 2, 0, 23, 59, 59, 999); // End at next month
+
+			// Start from beginning of previous month
+			startDate = new Date(year, month - 1, 1);
+			startDate.setHours(0, 0, 0, 0);
+
+			// End at end of next month
+			endDate = new Date(year, month + 2, 0);
+			endDate.setHours(23, 59, 59, 999);
 		} else if (currentView === 'day') {
 			// For day view, fetch a wider range (week) to improve performance when navigating days
 			const startOfWeek = new Date(displayDate);
 			startOfWeek.setDate(displayDate.getDate() - displayDate.getDay()); // Sunday
 			startOfWeek.setHours(0, 0, 0, 0);
-			
+
 			const endOfWeek = new Date(startOfWeek);
 			endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
 			endOfWeek.setHours(23, 59, 59, 999);
-			
+
 			startDate = startOfWeek;
 			endDate = endOfWeek;
 		} else if (currentView === 'year') {
 			startDate = new Date(displayDate.getFullYear(), 0, 1);
-			endDate = new Date(displayDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+			startDate.setHours(0, 0, 0, 0);
+			endDate = new Date(displayDate.getFullYear(), 11, 31);
+			endDate.setHours(23, 59, 59, 999);
 		} else {
 			console.error('Unknown view for fetching events:', currentView);
 			return;
@@ -111,7 +124,55 @@
 		console.log(
 			`Fetching events for ${currentView} view, range ${startDate.toISOString()} - ${endDate.toISOString()}`
 		);
+
+		// Use regular fetchEvents to maintain cache consistency
 		await calendarStore.fetchEvents(startDate, endDate);
+	}
+
+	async function ensureEventsForViewSwitch() {
+		let startDate: Date;
+		let endDate: Date;
+
+		if (currentView === 'month') {
+			// For month view, ensure we have a wide range
+			const year = displayDate.getFullYear();
+			const month = displayDate.getMonth();
+
+			// Start from beginning of previous month
+			startDate = new Date(year, month - 1, 1);
+			startDate.setHours(0, 0, 0, 0);
+
+			// End at end of next month
+			endDate = new Date(year, month + 2, 0);
+			endDate.setHours(23, 59, 59, 999);
+		} else if (currentView === 'day') {
+			// For day view, fetch a wider range (week)
+			const startOfWeek = new Date(displayDate);
+			startOfWeek.setDate(displayDate.getDate() - displayDate.getDay());
+			startOfWeek.setHours(0, 0, 0, 0);
+
+			const endOfWeek = new Date(startOfWeek);
+			endOfWeek.setDate(startOfWeek.getDate() + 6);
+			endOfWeek.setHours(23, 59, 59, 999);
+
+			startDate = startOfWeek;
+			endDate = endOfWeek;
+		} else if (currentView === 'year') {
+			startDate = new Date(displayDate.getFullYear(), 0, 1);
+			startDate.setHours(0, 0, 0, 0);
+			endDate = new Date(displayDate.getFullYear(), 11, 31);
+			endDate.setHours(23, 59, 59, 999);
+		} else {
+			console.error('Unknown view for ensuring events:', currentView);
+			return;
+		}
+
+		console.log(
+			`Ensuring events for ${currentView} view switch, range ${startDate.toISOString()} - ${endDate.toISOString()}`
+		);
+
+		// Use the new ensureEventsForView method for intelligent caching
+		await calendarStore.ensureEventsForView(startDate, endDate);
 	}
 
 	onMount(() => {
