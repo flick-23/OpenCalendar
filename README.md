@@ -2,6 +2,22 @@
 
 A decentralized calendar application built on the Internet Computer Protocol (ICP) that provides users with secure, private, and interoperable event management capabilities.
 
+## 📚 Table of Contents
+
+- [🌟 What is OpenCalendar?](#-what-is-opencalendar)
+- [🚀 Why ICP for Calendar Applications?](#-why-icp-for-calendar-applications)
+- [📋 Features](#-features)
+- [🛠️ Technology Stack](#️-technology-stack)
+- [🏗️ Architecture Overview](#️-architecture-overview)
+- [🚀 Getting Started](#-getting-started)
+- [📖 Usage](#-usage)
+- [🔧 Development](#-development)
+- [🚀 Deployment](#-deployment-1)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [🔗 Resources](#-resources)
+- [📞 Support](#-support)
+
 ## 🌟 What is OpenCalendar?
 
 OpenCalendar is a modern, full-featured calendar application that leverages the power of the Internet Computer blockchain to offer:
