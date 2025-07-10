@@ -5,6 +5,7 @@ A decentralized calendar application built on the Internet Computer Protocol (IC
 ## 📚 Table of Contents
 
 - [🌟 What is OpenCalendar?](#-what-is-opencalendar)
+- [🎥 Demo Video](#-demo-video)
 - [🚀 Why ICP for Calendar Applications?](#-why-icp-for-calendar-applications)
 - [📋 Features](#-features)
 - [🛠️ Technology Stack](#️-technology-stack)
@@ -28,6 +29,22 @@ OpenCalendar is a modern, full-featured calendar application that leverages the 
 - **Cross-Platform Access**: Access your calendar from any device with a web browser
 - **Real-Time Synchronization**: Changes are instantly reflected across all your devices
 - **Offline Resilience**: Built-in caching ensures the app works even with poor connectivity
+
+## 🎥 Demo Video
+
+🎬 **See OpenCalendar in Action!**
+
+Watch our comprehensive demo showcasing the current working version of OpenCalendar, including:
+- Event creation and editing with unified UI/UX
+- Separate date and time inputs for precise scheduling
+- 9-color event categorization system
+- Responsive design across different views (Month, Day, Year)
+- Internet Identity authentication
+- Real-time event management
+
+**[📺 View Demo Video](https://jumpshare.com/v/ubovYasZvNeszDKJ0nnx?b=y3CNpiu5V2Pab65hkAfc)**
+
+*The demo showcases the latest features including the modern, card-based event modals with consistent light theme UI/UX.*
 
 ## 🚀 Why ICP for Calendar Applications?
 
