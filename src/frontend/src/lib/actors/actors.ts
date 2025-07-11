@@ -31,7 +31,7 @@ export const createActor = async <T>(
 ): Promise<ActorSubclass<T>> => {
   const currentHost = host || (import.meta.env.VITE_DFX_NETWORK === 'ic'
     ? 'https://icp-api.io'
-    : 'http://127.0.0.1:8000');
+    : 'http://localhost:8000');
 
   const agent = new HttpAgent({
     host: currentHost,
