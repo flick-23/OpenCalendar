@@ -16,9 +16,20 @@ export default defineConfig({
 	server: {
 		proxy: {
 			'/api': {
-				target: 'http://127.0.0.1:4943',
+				target: 'http://localhost:8000',
 				changeOrigin: true,
+				headers: {
+					'Access-Control-Allow-Origin': '*',
+					'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+					'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+				},
 			},
+		},
+		cors: true,
+		headers: {
+			'Access-Control-Allow-Origin': '*',
+			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+			'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 		},
 	},
 });

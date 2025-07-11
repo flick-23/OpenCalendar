@@ -113,6 +113,23 @@ export const initAuth = async (): Promise<void> => {
   }
 };
 
+// Helper function to detect browser type
+const detectBrowser = (): string => {
+  if (typeof window === 'undefined') return 'unknown';
+  
+  const userAgent = window.navigator.userAgent;
+  
+  if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+    return 'safari';
+  } else if (userAgent.includes('Chrome') || userAgent.includes('Brave')) {
+    return 'chrome';
+  } else if (userAgent.includes('Firefox')) {
+    return 'firefox';
+  }
+  
+  return 'unknown';
+};
+
 // Helper function to get the Internet Identity URL
 const getInternetIdentityUrl = (): string => {
   const isIC = import.meta.env.VITE_DFX_NETWORK === 'ic';
@@ -129,9 +146,17 @@ const getInternetIdentityUrl = (): string => {
     throw new Error('Internet Identity canister ID not configured');
   }
   
-  // For local development, always use the legacy format which works reliably across all browsers
-  // This matches the port configuration in dfx.json (127.0.0.1:8000)
-  return `http://127.0.0.1:8000/?canisterId=${iiCanisterId}`;
+  const browser = detectBrowser();
+  console.log(`Detected browser: ${browser}`);
+  
+  // For Safari, use the new format that works better
+  if (browser === 'safari') {
+    return `http://localhost:8000/?canisterId=${iiCanisterId}`;
+  }
+  
+  // For Chrome, Firefox, and others, use localhost for consistency
+  // This matches the updated dfx.json binding
+  return `http://localhost:8000/?canisterId=${iiCanisterId}`;
 };
 
 // Login function
@@ -149,9 +174,11 @@ export const login = async (): Promise<void> => {
     const iiUrl = getInternetIdentityUrl();
     console.log('Attempting to login with Internet Identity URL:', iiUrl);
 
+    // Use redirect-based authentication for better reliability
     await new Promise<void>((resolve, reject) => {
       client.login({
         identityProvider: iiUrl,
+        // Force redirect-based login by not setting windowOpenerFeatures
         onSuccess: async () => {
           console.log('Login successful');
           const currentIdentity = client.getIdentity();
@@ -170,6 +197,8 @@ export const login = async (): Promise<void> => {
           userProfile.set(null); // Clear profile on login failure
           reject(err);
         },
+        // Add maxTimeToLive for token validity (8 hours)
+        maxTimeToLive: BigInt(8 * 60 * 60 * 1000 * 1000 * 1000), // 8 hours in nanoseconds
       });
     });
   } catch (error) {
