@@ -10,17 +10,21 @@
       "dependencies": [
         "user_registry",
         "calendar_canister_1",
+        "calendar_canister_secure",
         "scheduling_canister",
-        "notification_canister"
+        "notification_canister",
+        "canister_registry",
+        "load_balancer",
+        "backup_canister"
       ]
     },
     "user_registry": {
       "type": "motoko",
       "main": "src/backend/user_registry/UserRegistry.mo"
     },
-    "calendar_canister_1": {
+    "calendar_canister_secure": {
       "type": "motoko",
-      "main": "src/backend/calendar/CalendarCanister.mo"
+      "main": "src/backend/calendar/CalendarCanister_Secure.mo"
     },
     "scheduling_canister": {
       "type": "motoko",
@@ -29,6 +33,18 @@
     "notification_canister": {
       "type": "motoko",
       "main": "src/backend/notification/NotificationCanister.mo"
+    },
+    "canister_registry": {
+      "type": "motoko",
+      "main": "src/backend/registry/CanisterRegistry.mo"
+    },
+    "load_balancer": {
+      "type": "motoko",
+      "main": "src/backend/loadbalancer/LoadBalancer.mo"
+    },
+    "backup_canister": {
+      "type": "motoko",
+      "main": "src/backend/backup/BackupCanister.mo"
     },
         "internet_identity": {
       "__0": "The development build of Internet Identity. For more information, see https://github.com/dfinity/internet-identity#build-features-and-flavors",
