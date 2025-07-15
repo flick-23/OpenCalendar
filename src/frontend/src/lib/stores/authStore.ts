@@ -2,7 +2,7 @@ import { writable, type Writable, get } from 'svelte/store';
 import { AuthClient } from '@dfinity/auth-client';
 import type { Identity } from '@dfinity/agent';
 import type { Principal } from '@dfinity/principal';
-import { getUserRegistryActor } from '$lib/actors/actors';
+import { getUserRegistryActor } from '$lib/actors/secure-actors';
 import type { UserProfile } from '$declarations/user_registry/user_registry.did';
 
 // Create writable stores for each piece of the auth state
@@ -119,12 +119,13 @@ const detectBrowser = (): string => {
   
   const userAgent = window.navigator.userAgent;
   
-  if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
-    return 'safari';
-  } else if (userAgent.includes('Chrome') || userAgent.includes('Brave')) {
+  // Check for Chrome-based browsers (Chrome, Brave, Edge, etc.)
+  if (userAgent.includes('Chrome') || userAgent.includes('Brave') || userAgent.includes('Chromium')) {
     return 'chrome';
   } else if (userAgent.includes('Firefox')) {
     return 'firefox';
+  } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+    return 'safari';
   }
   
   return 'unknown';
@@ -149,13 +150,12 @@ const getInternetIdentityUrl = (): string => {
   const browser = detectBrowser();
   console.log(`Detected browser: ${browser}`);
   
-  // For Safari, use the new format that works better
-  if (browser === 'safari') {
-    return `http://localhost:8000/?canisterId=${iiCanisterId}`;
+  // For Chrome, Brave, and similar browsers, use the direct canister URL format
+  if (browser === 'chrome') {
+    return `http://${iiCanisterId}.localhost:8000/`;
   }
   
-  // For Chrome, Firefox, and others, use localhost for consistency
-  // This matches the updated dfx.json binding
+  // For Firefox and Safari, use the canisterId parameter format
   return `http://localhost:8000/?canisterId=${iiCanisterId}`;
 };
 

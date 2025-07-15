@@ -24,16 +24,16 @@ actor CalendarCanister {
 
     // === SECURITY & SCALING CONFIGURATION ===
 
-    // TODO: Replace these with actual deployed canister IDs
-    private let REGISTRY_CANISTER = Principal.fromText("rdmx6-jaaaa-aaaah-qdrqq-cai");
+    // Registry canister ID from deployment
+    private let REGISTRY_CANISTER = Principal.fromText("vpyes-67777-77774-qaaeq-cai");
     // Load balancer canister for distributed requests (currently unused but reserved)
-    private let _LOAD_BALANCER_CANISTER = Principal.fromText("rdmx6-jaaaa-aaaah-qdrqq-cai");
+    private let _LOAD_BALANCER_CANISTER = Principal.fromText("vu5yx-eh777-77774-qaaga-cai");
 
     // Canister configuration - should be set during deployment
     private let config : SecurityBase.CanisterConfig = {
         registry_canister = REGISTRY_CANISTER;
         group_id = "icp-calendar-main";
-        access_key = "your-generated-access-key"; // This will be provided during registration
+        access_key = "icp-calendar-secure-key-2025"; // Generated access key
         canister_type = "calendar";
         shard_key = ?"events-shard-1"; // For data partitioning
     };
@@ -56,11 +56,12 @@ actor CalendarCanister {
 
     // Custom hash function for EventId (Nat) to avoid deprecation warning
     private func hashEventId(id : Nat) : Hash.Hash {
-        // Simple hash that considers all bits for large numbers
+        // Safe hash function that handles large numbers without overflow
         var hash : Nat32 = 0;
         var n = id;
         while (n > 0) {
-            hash := hash * 31 + Nat32.fromNat(n % 256);
+            let byte = Nat32.fromNat(n % 256);
+            hash := (hash *% 31) +% byte; // Use overflow operators
             n := n / 256;
         };
         hash;

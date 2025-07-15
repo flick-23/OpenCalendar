@@ -2,7 +2,58 @@
  * Calendar Store - Frontend State Management for Calendar Events
  * 
  * This store manages the client-side cache of event data and provides
- * functions to interact with the CalendarCanister backend.
+ * functions      } catch (error: any) {
+        console.error('Error fetching events:        } else {
+          throw new Error(result.err);
+        }
+
+      } catch (er        } else {
+          throw new Error(result.err);
+        }
+
+      } catch (error: any) {
+        console.error('Error updating event:', error);
+        
+        // Show toast notification for error
+        toastStore.error(
+          'Failed to update event',
+          error.message || 'An unexpected error occurred while updating the event',
+          8000
+        );
+        
+        store.update(s => ({
+          ...s,
+          isLoading: false
+          // Note: No persistent error in state, only toast
+        }));
+      }        console.error('Error creating event:', error);
+        
+        // Show toast notification for error
+        toastStore.error(
+          'Failed to create event',
+          error.message || 'An unexpected error occurred while creating the event',
+          8000
+        );
+        
+        store.update(s => ({
+          ...s,
+          isLoading: false
+          // Note: No persistent error in state, only toast
+        }));
+      }       
+        // Show toast notification for error
+        toastStore.error(
+          'Failed to load events',
+          error.message || 'An unexpected error occurred while loading events',
+          8000
+        );
+        
+        store.update(s => ({
+          ...s,
+          isLoading: false
+          // Note: No persistent error in state, only toast
+        }));
+      }ract with the CalendarCanister backend.
  * 
  * Core Principle: The CalendarCanister is the single source of truth.
  * This store is just a cache for efficient UI rendering.
@@ -10,13 +61,14 @@
 
 import { writable, type Writable, get } from 'svelte/store';
 import { identity as authIdentity } from '$lib/stores/authStore';
-import { getCalendarCanisterActor } from '$lib/actors/actors';
+import { getCalendarSecureActor } from '$lib/actors/secure-actors';
+import { toastStore } from '$lib/stores/toastStore';
 
 // Import types from generated declarations
 import type {
-    _SERVICE as CalendarCanisterService,
+    _SERVICE as CalendarSecureService,
     Event as BackendEvent
-} from '$declarations/calendar_canister_1/calendar_canister_1.did';
+} from '$declarations/calendar_canister_secure/calendar_canister_secure.did';
 
 // Frontend Event type (simplified, matches backend Event structure)
 export interface Event {
@@ -37,7 +89,6 @@ export type AppId = bigint;
 interface CalendarState {
   events: Event[];
   isLoading: boolean;
-  error: string | null;
   lastFetchedRange: { start: Date; end: Date } | null; // Track the last fetched range
 }
 
@@ -45,7 +96,6 @@ interface CalendarState {
 const initialState: CalendarState = {
   events: [],
   isLoading: false,
-  error: null,
   lastFetchedRange: null
 };
 
@@ -63,9 +113,9 @@ function transformBackendEvent(backendEvent: BackendEvent): Event {
 }
 
 // Helper to get calendar canister actor instance
-async function getCalendarActor(): Promise<CalendarCanisterService> {
+async function getCalendarActor(): Promise<CalendarSecureService> {
   const identity = get(authIdentity);
-  return getCalendarCanisterActor(identity);
+  return getCalendarSecureActor(identity);
 }
 
 // Create the store with methods
@@ -192,6 +242,13 @@ export const calendarStore: Writable<CalendarState> & {
         if ('ok' in result) {
           console.log('Event created successfully:', result.ok);
           
+          // Show success toast
+          toastStore.success(
+            'Event created',
+            `"${eventData.title}" has been added to your calendar`,
+            4000
+          );
+          
           // Add the new event to the current cache immediately
           const newEvent = transformBackendEvent(result.ok);
           console.log('Adding new event to cache:', newEvent);
@@ -258,6 +315,13 @@ export const calendarStore: Writable<CalendarState> & {
         if ('ok' in result) {
           console.log('Event updated successfully:', result.ok);
           
+          // Show success toast
+          toastStore.success(
+            'Event updated',
+            `"${result.ok.title}" has been updated successfully`,
+            4000
+          );
+          
           // Update the event in the current cache
           const updatedEvent = transformBackendEvent(result.ok);
           console.log('Transformed updated event:', updatedEvent);
@@ -311,6 +375,13 @@ export const calendarStore: Writable<CalendarState> & {
         if ('ok' in result) {
           console.log('Event deleted successfully');
           
+          // Show success toast
+          toastStore.success(
+            'Event deleted',
+            'The event has been removed from your calendar',
+            4000
+          );
+          
           // Remove the event from the current cache
           store.update(s => ({
             ...s,
@@ -324,10 +395,18 @@ export const calendarStore: Writable<CalendarState> & {
 
       } catch (error: unknown) {
         console.error('Error deleting event:', error);
+        
+        // Show toast notification for error
+        toastStore.error(
+          'Failed to delete event',
+          error instanceof Error ? error.message : 'An unexpected error occurred while deleting the event',
+          8000
+        );
+        
         store.update(s => ({
           ...s,
-          isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to delete event'
+          isLoading: false
+          // Note: No persistent error in state, only toast
         }));
       }
     },

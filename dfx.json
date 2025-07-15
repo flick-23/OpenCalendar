@@ -9,7 +9,6 @@
       ],
       "dependencies": [
         "user_registry",
-        "calendar_canister_1",
         "calendar_canister_secure",
         "scheduling_canister",
         "notification_canister",
@@ -46,13 +45,35 @@
       "type": "motoko",
       "main": "src/backend/backup/BackupCanister.mo"
     },
+    "test_runner": {
+      "type": "motoko",
+      "main": "tests/TestRunner.mo"
+    },
+    "security_base_tests": {
+      "type": "motoko",
+      "main": "tests/unit/SecurityBaseTests.mo"
+    },
+    "calendar_secure_tests": {
+      "type": "motoko",
+      "main": "tests/unit/CalendarSecureTests.mo"
+    },
+    "loadbalancer_tests": {
+      "type": "motoko",
+      "main": "tests/unit/LoadBalancerTests.mo"
+    },
+    "integration_tests": {
+      "type": "motoko",
+      "main": "tests/integration/IntegrationTests.mo"
+    },
         "internet_identity": {
       "__0": "The development build of Internet Identity. For more information, see https://github.com/dfinity/internet-identity#build-features-and-flavors",
       "type": "custom",
       "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
       "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz",
-      "frontend": {},
-
+      "frontend": {
+        "__comment": "Frontend is included in the wasm"
+      },
+      
       "__1": "This init arg will disable the captcha during registration",
       "init_arg": "(opt record { captcha_config = opt record { max_unsolved_captchas= 50:nat64; captcha_trigger = variant {Static = variant {CaptchaDisabled}}}})",
 

@@ -1,6 +1,6 @@
 // src/frontend/src/lib/stores/calendarStore.ts
 import { writable, type Writable } from 'svelte/store';
-import { getCalendarCanisterActor } from '$lib/actors/actors';
+import { getCalendarSecureActor } from '$lib/actors/secure-actors';
 import type { ActorSubclass } from '@dfinity/agent';
 
 // === TYPE DEFINITIONS ===

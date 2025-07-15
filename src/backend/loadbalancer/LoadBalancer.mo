@@ -48,7 +48,7 @@ actor LoadBalancer {
     );
 
     // Configuration
-    private let REGISTRY_CANISTER = Principal.fromText("rdmx6-jaaaa-aaaah-qdrqq-cai"); // Replace with actual registry
+    private let REGISTRY_CANISTER = Principal.fromText("vpyes-67777-77774-qaaeq-cai"); // Registry canister ID
     private let DEFAULT_GROUP_ID = "icp-calendar-main";
 
     // Get best canister for a request type using specified strategy

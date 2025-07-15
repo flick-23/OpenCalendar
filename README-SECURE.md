@@ -36,10 +36,10 @@ This project implements a production-ready, secure, and scalable calendar applic
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Frontend (SvelteKit)                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │
-│  │ Auth Store  │  │Events Store │  │Calendar Store│           │
-│  └─────────────┘  └─────────────┘  └─────────────┘           │
+│                    Frontend (SvelteKit)                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │ Auth Store  │  │Events Store │  │Calendar Store│             │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               │ Actor Calls (Authenticated)
@@ -47,24 +47,24 @@ This project implements a production-ready, secure, and scalable calendar applic
 ┌─────────────────────────────────────────────────────────────────┐
 │                Internet Computer Network                        │
 │                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │
-│  │ Canister    │  │ Load        │  │ Backup      │           │
-│  │ Registry    │  │ Balancer    │  │ System      │           │
-│  │             │  │             │  │             │           │
-│  │ • Groups    │  │ • Health    │  │ • Snapshots │           │
-│  │ • Security  │  │ • Routing   │  │ • Recovery  │           │
-│  │ • Monitoring│  │ • Metrics   │  │ • Restore   │           │
-│  └─────────────┘  └─────────────┘  └─────────────┘           │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │ Canister    │  │ Load        │  │ Backup      │              │
+│  │ Registry    │  │ Balancer    │  │ System      │              │
+│  │             │  │             │  │             │              │
+│  │ • Groups    │  │ • Health    │  │ • Snapshots │              │
+│  │ • Security  │  │ • Routing   │  │ • Recovery  │              │
+│  │ • Monitoring│  │ • Metrics   │  │ • Restore   │              │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
 │                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │
-│  │ Calendar    │  │ Notification│  │ User        │           │
-│  │ Canister    │  │ Canister    │  │ Registry    │           │
-│  │ (Secure)    │  │             │  │             │           │
-│  │             │  │ • Reminders │  │ • Profiles  │           │
-│  │ • Events    │  │ • Alerts    │  │ • Auth      │           │
-│  │ • Security  │  │ • Queue     │  │ • Settings  │           │
-│  │ • Metrics   │  │ • Batch     │  │             │           │
-│  └─────────────┘  └─────────────┘  └─────────────┘           │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │ Calendar    │  │ Notification│  │ User        │              │
+│  │ Canister    │  │ Canister    │  │ Registry    │              │
+│  │ (Secure)    │  │             │  │             │              │
+│  │             │  │ • Reminders │  │ • Profiles  │              │
+│  │ • Events    │  │ • Alerts    │  │ • Auth      │              │
+│  │ • Security  │  │ • Queue     │  │ • Settings  │              │
+│  │ • Metrics   │  │ • Batch     │  │             │              │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

@@ -20,12 +20,12 @@
 	// Subscribe to the new simplified calendarStore
 	let currentEvents: Event[] = [];
 	let isLoadingEvents = false;
-	let error: string | null = null;
+	// Note: error field removed - now using toast notifications
 
 	const unsubscribe = calendarStore.subscribe((value) => {
 		currentEvents = value.events;
 		isLoadingEvents = value.isLoading;
-		error = value.error;
+		// Note: error field removed - now using toast notifications
 	});
 
 	function handleSetView(event: CustomEvent<CalendarView>) {
@@ -208,14 +208,6 @@
 					class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0c7ff2] mx-auto mb-4"
 				></div>
 				Loading events...
-			</div>
-		{/if}
-		{#if error}
-			<div class="text-center p-10 text-red-500">
-				<div class="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
-					<p class="font-medium">Error loading events</p>
-					<p class="text-sm mt-1">{error}</p>
-				</div>
 			</div>
 		{/if}
 		{#if currentView === 'month'}

@@ -10,19 +10,15 @@
 
 import { writable, type Writable } from 'svelte/store';
 import { identity as authIdentity } from '$lib/stores/authStore';
-import { createActor } from '$lib/actors/actors';
+import { getCalendarSecureActor } from '$lib/actors/secure-actors';
 
 // Import IDL and types from generated declarations
-import {
-    idlFactory as calendarCanisterIdlFactory,
-    canisterId as calendarCanisterId
-} from '$declarations/calendar_canister_1';
 import type {
-    _SERVICE as CalendarCanisterService,
+    _SERVICE as CalendarSecureService,
     Event as BackendEvent,
     EventId as BackendEventId,
     Timestamp as BackendTimestamp
-} from '$declarations/calendar_canister_1/calendar_canister_1.did';
+} from '$declarations/calendar_canister_secure/calendar_canister_secure.did';
 
 // Frontend Event type (simplified, no calendarId needed for new system)
 export interface Event {
@@ -63,12 +59,9 @@ function transformBackendEvent(backendEvent: BackendEvent): Event {
 }
 
 // Helper to get calendar canister actor instance
-async function getCalendarActor(): Promise<CalendarCanisterService> {
+async function getCalendarActor(): Promise<CalendarSecureService> {
   const identity = authIdentity.get();
-  return createActor(calendarCanisterIdlFactory, {
-    canisterId: calendarCanisterId,
-    agentOptions: { identity }
-  }) as CalendarCanisterService;
+  return await getCalendarSecureActor(identity);
 }
 
 // Create the store with methods

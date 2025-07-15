@@ -4,6 +4,7 @@
 	import { isLoggedIn, logout } from '$lib/stores/authStore';
 	import { applyTheme } from '$lib/stores/settingsStore';
 	import { onMount } from 'svelte';
+	import Toast from '$lib/components/Toast.svelte';
 
 	// Optional: Loading indicator during navigation
 	// $: isLoading = $navigating;
@@ -38,6 +39,9 @@
 			<slot /> <!-- Page content will be injected here -->
 		{/if}
 	</main>
+
+	<!-- Toast notifications -->
+	<Toast />
 </div>
 
 <style lang="postcss">
